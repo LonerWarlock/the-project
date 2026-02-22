@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "api": "cd api && uvicorn index:app --reload --port 8000",
+    "tathastu": "concurrently \"npm run dev\" \"npm run api\" --names \"NEXT,API\" --prefix-colors \"blue,magenta\""
   },
   "dependencies": {
     "next": "16.1.6",
@@ -19,6 +21,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
+    "concurrently": "^9.2.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
