@@ -5,41 +5,35 @@ import pandas as pd
 import numpy as np
 import os
 
-print("--- STARTING API ---") # Debug print
+print("--- STARTING API ---", flush=True) # Debug print
 
 app = FastAPI()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 
-print(f"--- LOOKING FOR FILES IN: {DATA_DIR} ---") # Debug print
+print(f"--- LOOKING FOR FILES IN: {DATA_DIR} ---", flush=True) # Debug print
 
 try:
     model_path = os.path.join(DATA_DIR, "disease_model.pkl")
+    symptoms_list_path = os.path.join(DATA_DIR, "symptoms.pkl") # NEW
     csv_path = os.path.join(DATA_DIR, "Training.csv")
 
-    print(f"--- LOADING MODEL FROM: {model_path} ---") # Debug print
-    if not os.path.exists(model_path):
-        print("!!! ERROR: MODEL FILE NOT FOUND !!!")
-    else:
-        # Check file size
-        size = os.path.getsize(model_path)
-        print(f"--- MODEL SIZE: {size} bytes ---")
-        
-        with open(model_path, "rb") as f:
-            model = pickle.load(f)
-        print("--- MODEL LOADED SUCCESSFULLY ---") # Debug print
+    # 1. Load Model
+    with open(model_path, "rb") as f:
+        model = pickle.load(f)
 
-    print("--- LOADING CSV DATA ---") # Debug print
+    # 2. REPLACE the all_symptoms logic with this:
+    with open(symptoms_list_path, "rb") as f:
+        all_symptoms = pickle.load(f)
+
+    # 3. Load and Clean CSV (Match Notebook cleaning)
     train_df = pd.read_csv(csv_path)
-    print("--- CSV LOADED SUCCESSFULLY ---") # Debug print
-
+    train_df = train_df.loc[:, ~train_df.columns.str.contains('^Unnamed')]
     train_df.columns = train_df.columns.str.strip()
-    all_symptoms = [col for col in train_df.columns if col != 'prognosis']
-    print(f"--- FOUND {len(all_symptoms)} SYMPTOMS ---") # Debug print
 
 except Exception as e:
-    print(f"!!! CRITICAL ERROR DURING LOADING: {e} !!!")
+    print(f"!!! CRITICAL ERROR: {e} !!!")
     model = None
     all_symptoms = []
 
@@ -48,6 +42,9 @@ class SymptomRequest(BaseModel):
 
 @app.post("/api/predict")
 def predict_disease(request: SymptomRequest):
+    if len(request.symptoms) < 3:
+        return {"error": "Please select at least 3 symptoms for analysis."}
+    
     if not model:
         return {"error": "Model failed to load. Check server logs."}
     
@@ -76,22 +73,21 @@ def predict_disease(request: SymptomRequest):
 
 @app.post("/api/related_symptoms")
 def get_related(request: SymptomRequest):
-    selected = request.symptoms
-    if not selected: return {"related": []}
+    selected = [s for s in request.symptoms if s in all_symptoms]
+    if not selected: 
+        return {"related": []}
     
-    valid = [s for s in selected if s in all_symptoms]
-    if not valid: return {"related": []}
-
-    mask = pd.Series(True, index=train_df.index)
-    for s in valid:
-        mask &= (train_df[s] == 1)
+    # Logic: Find rows where ANY of the selected symptoms are present
+    mask = train_df[selected].sum(axis=1) > 0
     filtered = train_df[mask]
     
     if filtered.empty:
-        filtered = train_df[train_df[valid[-1]] == 1]
+        return {"related": []}
     
-    drop_cols = valid + ['prognosis']
-    drop_cols = [c for c in drop_cols if c in filtered.columns]
+    # Calculate frequency of symptoms not already selected
+    drop_cols = selected + ['prognosis']
+    related_series = filtered.drop(columns=drop_cols, errors='ignore').sum()
     
-    related = filtered.drop(columns=drop_cols).sum().sort_values(ascending=False)
-    return {"related": related.head(5).index.tolist()}
+    # Return top 5 most frequent symptoms found in those cases
+    top_related = related_series.sort_values(ascending=False).head(5)
+    return {"related": top_related.index.tolist()}
