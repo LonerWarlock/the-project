@@ -1,48 +1,27 @@
-import { GoogleGenerativeAI, SchemaType, Schema } from "@google/generative-ai";
+import Groq from "groq-sdk";
 import { NextResponse } from "next/server";
-import { ALL_SYMPTOMS } from "@/lib/symptoms-list"; 
+import { ALL_SYMPTOMS } from "@/lib/symptoms-list";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-
-// 1. Remove the 'enum' to prevent the branching error
-const relatedSchema: Schema = {
-  description: "List of related symptoms",
-  type: SchemaType.ARRAY,
-  items: {
-    type: SchemaType.STRING,
-  },
-};
-
-const model = genAI.getGenerativeModel({
-  model: "gemini-2.5-flash",
-  generationConfig: {
-    responseMimeType: "application/json",
-    responseSchema: relatedSchema,
-  },
-});
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 export async function POST(request: Request) {
   try {
     const { symptoms } = await request.json();
 
-    // 2. Provide the symptoms in the prompt text instead of the schema
     const prompt = `
-      A user has selected these symptoms: ${symptoms.join(", ")}. 
-      Suggest 5 other symptoms frequently associated with these.
-      
-      CRITICAL: You must only suggest symptoms from this exact list:
-      ${ALL_SYMPTOMS.join(", ")}
+      Selected: ${symptoms.join(", ")}. 
+      Suggest 5 related symptoms from this list ONLY: ${ALL_SYMPTOMS.join(", ")}.
+      Return as JSON: { "related": ["symptom1", "symptom2"] }
     `;
 
-    const result = await model.generateContent(prompt);
-    const rawRelated: string[] = JSON.parse(result.response.text());
+    const completion = await groq.chat.completions.create({
+      messages: [{ role: "user", content: prompt }],
+      model: "llama-3.3-70b-versatile",
+      response_format: { type: "json_object" },
+    });
 
-    // 3. SANITIZATION: Filter the AI response to ensure only valid symptoms pass through
-    const validatedRelated = rawRelated.filter(s => ALL_SYMPTOMS.includes(s));
-
-    return NextResponse.json({ related: validatedRelated });
+    return NextResponse.json(JSON.parse(completion.choices[0].message.content || "{}"));
   } catch (error) {
-    console.error("Related Symptoms Error:", error);
     return NextResponse.json({ related: [] });
   }
 }
