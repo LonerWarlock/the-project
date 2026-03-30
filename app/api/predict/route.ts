@@ -1,7 +1,9 @@
 import { GoogleGenerativeAI, SchemaType, Schema } from "@google/generative-ai";
 import { NextResponse } from "next/server";
+import { ALL_DISEASES } from "@/lib/diseases-list"; // Import the list
 
-// 2. Define the schema with an explicit 'Schema' type to resolve the error
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+
 const schema: Schema = {
   description: "Disease predictions based on symptoms",
   type: SchemaType.ARRAY,
@@ -10,8 +12,9 @@ const schema: Schema = {
     properties: {
       disease: { 
         type: SchemaType.STRING, 
-        description: "Name of the disease" 
-      },
+        description: "Name of the disease",
+        enum: ALL_DISEASES // <--- Constraint added here
+      } as any,
       confidence: { 
         type: SchemaType.NUMBER, 
         description: "Confidence percentage (0-100)" 
@@ -21,49 +24,34 @@ const schema: Schema = {
   },
 };
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-const model = genAI.getGenerativeModel({ 
-  model: "gemini-2.5-flash"
+const model = genAI.getGenerativeModel({
+  model: "gemini-2.0-flash",
+  generationConfig: {
+    responseMimeType: "application/json",
+    responseSchema: schema,
+  },
 });
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const symptoms: string[] = body.symptoms;
+    const { symptoms } = await request.json();
 
-    if (!symptoms || symptoms.length < 3) {
-      return NextResponse.json(
-        { error: "Select at least 3 symptoms" }, 
-        { status: 400 }
-      );
-    }
-
-const prompt = `
-  Analyze these symptoms: ${symptoms.join(", ")}. 
-  Return exactly the top 3 most likely conditions. 
-
-  Example Output:
-  [
-    { "disease": "Condition Name", "confidence": 95.5 },
-    { "disease": "Condition Name", "confidence": 70.2 },
-    { "disease": "Condition Name", "confidence": 40.0 }
-  ]
-
-  Return ONLY the raw JSON array. No markdown, no text.
-`;
+    const prompt = `
+      Act as a medical assistant. Analyze: ${symptoms.join(", ")}. 
+      Return the top 3 likely conditions from the allowed list.
+      
+      Example Output:
+      [
+        { "disease": "Diabetes", "confidence": 92.0 },
+        { "disease": "Hypertension", "confidence": 15.5 }
+      ]
+    `;
 
     const result = await model.generateContent(prompt);
-    const response = result.response;
-    const text = response.text();
-    
-    // 4. Return the data to your frontend
-    return NextResponse.json({ predictions: JSON.parse(text) });
+    return NextResponse.json({ predictions: JSON.parse(result.response.text()) });
     
   } catch (error) {
-    console.error("Gemini API Error:", error);
-    return NextResponse.json(
-      { error: "Analysis failed" }, 
-      { status: 500 }
-    );
+    console.error("Prediction Error:", error);
+    return NextResponse.json({ error: "Analysis failed" }, { status: 500 });
   }
 }
