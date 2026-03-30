@@ -1,5 +1,5 @@
 // script.ts
-const API_KEY = "AIzaSyBABBA8e3E6hcdk3BvFj-BekcppFiFQmEo"; // Ensure this matches your .env.local key
+// Ensure this matches your .env.local key
 const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${API_KEY}`;
 
 async function listModels() {
