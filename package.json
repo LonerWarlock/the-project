@@ -11,7 +11,8 @@
     "tathastu": "concurrently \"npm run dev\" \"npm run api\" --names \"NEXT,API\" --prefix-colors \"blue,magenta\""
   },
   "dependencies": {
-    "next": "16.1.6",
+    "@google/generative-ai": "^0.24.1",
+    "next": "^16.2.1",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
