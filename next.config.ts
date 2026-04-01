@@ -6,8 +6,13 @@ const nextConfig: NextConfig = {
     const apiUrl = process.env.PYTHON_API_URL || "http://localhost:8000";
     return [
       {
-        source: '/api/:path*',
-        destination: `${apiUrl}/api/:path*`,
+        /**
+         * This regex matches all /api/:path* EXCEPT when the path starts with 'auth'.
+         * This allows NextAuth to handle /api/auth while your Python 
+         * backend handles everything else.
+         */
+        source: '/api/((?!auth).*)', 
+        destination: `${apiUrl}/api/:1`,
       },
     ]
   },

@@ -1,7 +1,10 @@
 "use client";
+
 import { useState, useEffect, useMemo } from "react";
-import { Bookmark, Search, Activity, ChevronRight } from "lucide-react";
+import { Bookmark, Search, Activity, ChevronRight, Loader2 } from "lucide-react";
 import { ALL_SYMPTOMS } from "@/lib/symptoms-list";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 const COMMON_SYMPTOMS = [
   "fatigue",
@@ -20,7 +23,10 @@ const formatName = (name: string) =>
   name.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
 
 export default function PredictPage() {
-  // 1. All State Hooks (Must be inside the function body)
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  // --- 1. All Hooks (State, Memo, Effects) must be at the very top ---
   const [isExpanded, setIsExpanded] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [related, setRelated] = useState<string[]>([]);
@@ -28,36 +34,33 @@ export default function PredictPage() {
   const [predictions, setPredictions] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // --- Logic: Filtering for Sections ---
+  // Authentication Redirect Hook
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/");
+    }
+  }, [status, router]);
 
-  // Identify what is currently visible in the specialized sections
+  // Filtering Logic
   const visibleElsewhere = useMemo(
     () => new Set([...COMMON_SYMPTOMS, ...selected, ...related]),
     [selected, related],
   );
 
-  // Filter the master list for the "Discover" section
   const otherSymptoms = useMemo(() => {
     const uniqueAllSymptoms = Array.from(new Set(ALL_SYMPTOMS));
     return uniqueAllSymptoms.filter((s) => !visibleElsewhere.has(s));
   }, [visibleElsewhere]);
 
-  // Handle pagination for the "Discover" section
   const displayedOthers = isExpanded
     ? otherSymptoms
     : otherSymptoms.slice(0, 10);
 
-  // --- Logic: Search ---
-  // --- NEW: Search Logic (Normalized for Spaces/Underscores) ---
   const searchResults = useMemo(() => {
     if (searchQuery.length < 2) return [];
-
     const normalizedQuery = searchQuery.toLowerCase().replace(/\s+/g, "_");
-
     return ALL_SYMPTOMS.filter((s) => {
       const symptomName = s.toLowerCase();
-
-      // Check if the query matches the underscore version OR the space version
       return (
         (symptomName.includes(normalizedQuery) ||
           symptomName.replace(/_/g, " ").includes(searchQuery.toLowerCase())) &&
@@ -66,6 +69,46 @@ export default function PredictPage() {
     }).slice(0, 6);
   }, [searchQuery, selected]);
 
+  // Related Symptoms Effect
+  useEffect(() => {
+    const fetchRelated = async () => {
+      if (selected.length !== 1) {
+        if (selected.length === 0) setRelated([]);
+        return;
+      }
+      try {
+        const res = await fetch("/api/related_symptoms", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ symptoms: selected }),
+        });
+        const data = await res.json();
+        const newRelated = data.related.filter(
+          (s: string) => !selected.includes(s),
+        );
+        setRelated(newRelated);
+      } catch (err) {
+        console.error("Failed to fetch related symptoms");
+      }
+    };
+    const timer = setTimeout(fetchRelated, 300);
+    return () => clearTimeout(timer);
+  }, [selected]);
+
+  // --- 2. Conditional Returns (After Hooks) ---
+  if (status === "loading") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <Loader2 className="h-10 w-10 animate-spin text-indigo-600" />
+      </div>
+    );
+  }
+
+  if (!session) {
+    return null;
+  }
+
+  // --- 3. Logic Handlers ---
   const toggleSymptom = (symptom: string) => {
     setSelected((prev) =>
       prev.includes(symptom)
@@ -75,37 +118,6 @@ export default function PredictPage() {
     setPredictions(null);
   };
 
-  // --- Logic: Fetch Related (Groq API) ---
-  useEffect(() => {
-    const fetchRelated = async () => {
-      // Logic: Only fetch when exactly 1 symptom is selected
-      if (selected.length !== 1) {
-        if (selected.length === 0) setRelated([]);
-        return;
-      }
-
-      try {
-        const res = await fetch("/api/related_symptoms", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ symptoms: selected }),
-        });
-        const data = await res.json();
-
-        const newRelated = data.related.filter(
-          (s: string) => !selected.includes(s),
-        );
-        setRelated(newRelated);
-      } catch (err) {
-        console.error("Failed to fetch related symptoms");
-      }
-    };
-
-    const timer = setTimeout(fetchRelated, 300);
-    return () => clearTimeout(timer);
-  }, [selected]);
-
-  // --- Logic: Handle Prediction ---
   const handlePredict = async () => {
     if (selected.length < 3) return;
     setLoading(true);
@@ -125,16 +137,23 @@ export default function PredictPage() {
   };
 
   const savePrediction = async () => {
-    await fetch("/api/predictions/save", {
-      method: "POST",
-      body: JSON.stringify({
-        symptoms: selected,
-        results: predictions,
-      }),
-    });
-    alert("Saved to history!");
+    try {
+      await fetch("/api/predictions/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          symptoms: selected,
+          results: predictions,
+          userEmail: session.user?.email,
+        }),
+      });
+      alert("Saved to history!");
+    } catch (err) {
+      alert("Failed to save record.");
+    }
   };
 
+  // --- 4. Main UI Render ---
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 p-6 md:p-12 font-sans">
       <div className="max-w-3xl mx-auto">
@@ -143,7 +162,7 @@ export default function PredictPage() {
             AI Diagnostic Tool
           </h1>
           <p className="text-slate-500">
-            Search or select at least 3 symptoms to begin
+            Authenticated as <span className="font-semibold">{session.user?.email}</span>
           </p>
         </div>
 
@@ -169,7 +188,7 @@ export default function PredictPage() {
                   className="w-full text-left p-4 hover:bg-indigo-50 border-b last:border-none transition-colors flex justify-between items-center group"
                 >
                   <span className="font-medium">{formatName(s)}</span>
-                  <span className="text-indigo-400 opacity-0 group-hover:opacity-100">
+                  <span className="text-indigo-400 opacity-0 group-hover:opacity-100 font-bold">
                     + Add
                   </span>
                 </button>
@@ -185,7 +204,6 @@ export default function PredictPage() {
               Selected Symptoms
             </h3>
 
-            {/* Clear All Button */}
             {selected.length > 0 && (
               <button
                 onClick={() => {
@@ -213,7 +231,7 @@ export default function PredictPage() {
                 className="group flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-full text-sm font-medium shadow-md transition-all hover:bg-indigo-700 hover:shadow-lg"
               >
                 <span>✓</span> {formatName(s)}{" "}
-                <span className="ml-1 opacity-60 group-hover:opacity-100">
+                <span className="ml-1 opacity-60 group-hover:opacity-100 text-lg">
                   ×
                 </span>
               </button>
@@ -221,7 +239,7 @@ export default function PredictPage() {
           </div>
         </div>
 
-        {/* 3. SUGGESTED SYMPTOMS (Only shows when 1+ selected) */}
+        {/* 3. SUGGESTED SYMPTOMS */}
         {related.length > 0 && (
           <div className="mb-8 p-5 bg-indigo-50 border border-indigo-100 rounded-2xl">
             <h3 className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-3">
@@ -265,7 +283,6 @@ export default function PredictPage() {
         </div>
 
         {/* 5. DISCOVER ALL SYMPTOMS (Collapsible) */}
-        {/* 5. DISCOVER ALL SYMPTOMS (Collapsible) */}
         <div className="mb-10 pt-8 border-t border-slate-200">
           <div className="mb-4">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
@@ -285,24 +302,15 @@ export default function PredictPage() {
             ))}
           </div>
 
-          {/* Button moved to the end of the list */}
           {otherSymptoms.length > 10 && (
             <div className="mt-6 flex justify-center">
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-6 py-2 rounded-full transition-colors border border-indigo-100"
+                className="flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-6 py-2 rounded-full transition-colors border border-indigo-100 shadow-sm"
               >
-                {isExpanded ? (
-                  <>Show Less Symptoms ↑</>
-                ) : (
-                  <>View All Symptoms ↓</>
-                )}
+                {isExpanded ? "Show Less Symptoms ↑" : "View All Symptoms ↓"}
               </button>
             </div>
-          )}
-
-          {!isExpanded && otherSymptoms.length > 10 && (
-            <div className="mt-4 h-8 bg-gradient-to-t from-slate-50 to-transparent pointer-events-none" />
           )}
         </div>
 
@@ -349,19 +357,20 @@ export default function PredictPage() {
                 </div>
               ))}
             </div>
-            <p className="mt-6 text-xs text-slate-400 text-center italic">
+
+            <button
+              onClick={savePrediction}
+              className="mt-8 flex items-center justify-center gap-2 w-full bg-slate-900 text-white p-4 rounded-2xl font-bold hover:bg-black transition-all shadow-lg active:scale-95"
+            >
+              <Bookmark size={20} /> Save to My Records
+            </button>
+
+            <p className="mt-6 text-xs text-slate-400 text-center italic leading-relaxed">
               Disclaimer: This is an AI-generated assessment for informational
-              purposes only. Consult a doctor for medical advice.
+              purposes only. Consult a healthcare professional for actual medical advice.
             </p>
           </div>
         )}
-
-        <button
-          onClick={savePrediction}
-          className="mt-6 flex items-center justify-center gap-2 w-full bg-slate-900 text-white p-4 rounded-2xl font-bold hover:bg-black transition-all"
-        >
-          <Bookmark size={20} /> Save to My Records
-        </button>
       </div>
     </div>
   );

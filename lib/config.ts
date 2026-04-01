@@ -1,1 +1,1 @@
-export const PREDICTION_MODE = 0; // 0 = Built Models
+export const PREDICTION_MODE = 1; // 0 = Built Models
