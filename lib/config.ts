@@ -1,0 +1,1 @@
+export const PREDICTION_MODE = 0; // 0 = ML Model
