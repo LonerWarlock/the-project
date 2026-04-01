@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
+import { Bookmark, Search, Activity, ChevronRight } from "lucide-react";
 import { ALL_SYMPTOMS } from "@/lib/symptoms-list";
 
 const COMMON_SYMPTOMS = [
@@ -121,6 +122,17 @@ export default function PredictPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const savePrediction = async () => {
+    await fetch("/api/predictions/save", {
+      method: "POST",
+      body: JSON.stringify({
+        symptoms: selected,
+        results: predictions,
+      }),
+    });
+    alert("Saved to history!");
   };
 
   return (
@@ -343,6 +355,13 @@ export default function PredictPage() {
             </p>
           </div>
         )}
+
+        <button
+          onClick={savePrediction}
+          className="mt-6 flex items-center justify-center gap-2 w-full bg-slate-900 text-white p-4 rounded-2xl font-bold hover:bg-black transition-all"
+        >
+          <Bookmark size={20} /> Save to My Records
+        </button>
       </div>
     </div>
   );

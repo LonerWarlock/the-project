@@ -45,3 +45,5 @@ next-env.d.ts
 
 #large_datasets
 lib/csv/dataset_246946.csv
+
+/lib/generated/prisma
