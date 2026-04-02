@@ -1,16 +1,12 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { 
-  History, 
-  Calendar, 
-  ChevronRight, 
-  Activity, 
-  Clock, 
-  Loader2, 
-  AlertCircle 
+import {
+  History,
+  ChevronRight,
+  Activity,
+  Loader2,
 } from "lucide-react";
 
 interface PredictionRecord {
@@ -20,6 +16,42 @@ interface PredictionRecord {
   results: { disease: string; confidence: number }[];
   modelUsed: string;
 }
+
+// Helper for dynamic model colours
+const getModelStyles = (model: string) => {
+  switch (model?.toLowerCase()) {
+    case "advanced":
+      return {
+        bg: "bg-indigo-50",
+        text: "text-indigo-600",
+        border: "border-indigo-100",
+        badge: "bg-indigo-100 text-indigo-700 border-indigo-200",
+        dateText: "text-indigo-300",
+        dateNum: "text-indigo-900",
+        hoverBg: "group-hover:bg-indigo-600"
+      };
+    case "skin":
+      return {
+        bg: "bg-emerald-50",
+        text: "text-emerald-600",
+        border: "border-emerald-100",
+        badge: "bg-emerald-100 text-emerald-700 border-emerald-200",
+        dateText: "text-emerald-300",
+        dateNum: "text-emerald-900",
+        hoverBg: "group-hover:bg-emerald-600"
+      };
+    default: // basic
+      return {
+        bg: "bg-amber-50",
+        text: "text-amber-600",
+        border: "border-amber-100",
+        badge: "bg-amber-100 text-amber-700 border-amber-200",
+        dateText: "text-amber-300",
+        dateNum: "text-amber-900",
+        hoverBg: "group-hover:bg-amber-600"
+      };
+  }
+};
 
 export default function HistoryPage() {
   const { data: session, status } = useSession();
@@ -50,96 +82,113 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-8 font-sans">
-      <div className="max-w-5xl mx-auto">
-        {/* Header */}
-        <div className="mb-10">
-          <h1 className="text-3xl font-black text-indigo-900 flex items-center gap-3">
-            <History size={32} /> Prediction History
+    <div className="min-h-screen bg-slate-50 p-6 font-sans">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-2xl font-black text-indigo-900 flex items-center gap-2">
+            <History size={24} /> Saved Reports
           </h1>
-          <p className="text-slate-500 mt-2">
-            Review your past AI diagnostic assessments and clinical insights.
-          </p>
+          <p className="text-slate-400 text-sm">Your past AI assessments.</p>
         </div>
 
         {records.length === 0 ? (
-          <div className="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-12 text-center">
-            <div className="bg-slate-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Activity className="text-slate-400" />
-            </div>
-            <h3 className="text-lg font-bold text-slate-700">No records found</h3>
-            <p className="text-slate-500 mb-6">You haven't saved any diagnostic results yet.</p>
-            <button 
+          <div className="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-10 text-center">
+            <Activity className="text-slate-300 mx-auto mb-3" size={40} />
+            <h3 className="font-bold text-slate-700">No records yet</h3>
+            <button
               onClick={() => router.push("/models")}
-              className="bg-indigo-600 text-white px-6 py-2 rounded-full font-bold hover:bg-indigo-700 transition-all"
+              className="text-indigo-600 text-sm font-bold mt-2"
             >
-              Start New Diagnosis
+              Start a Diagnosis →
             </button>
           </div>
         ) : (
-          <div className="grid gap-6">
-            {records.map((record) => (
-              <div 
-                key={record.id} 
-                className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow flex flex-col md:flex-row gap-6 items-start md:items-center"
-              >
-                {/* Date/Time Block */}
-                <div className="flex flex-col items-center justify-center bg-indigo-50 rounded-2xl p-4 min-w-[100px]">
-                  <span className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-1">
-                    {new Date(record.createdAt).toLocaleDateString('en-GB', { month: 'short' })}
-                  </span>
-                  <span className="text-2xl font-black text-indigo-900">
-                    {new Date(record.createdAt).getDate()}
-                  </span>
-                  <div className="flex items-center gap-1 text-[10px] text-indigo-400 font-bold mt-1">
-                    <Clock size={10} /> {new Date(record.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                </div>
-
-                {/* Content Block */}
-                <div className="flex-1">
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {record.symptoms.slice(0, 4).map((s, i) => (
-                      <span key={i} className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded-md uppercase">
-                        {s.replace(/_/g, ' ')}
-                      </span>
-                    ))}
-                    {record.symptoms.length > 4 && (
-                      <span className="text-[10px] font-bold text-slate-400">+{record.symptoms.length - 4} more</span>
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center gap-4">
-                    <h3 className="text-xl font-bold text-slate-800">
-                      Top Result: {record.results[0]?.disease}
-                    </h3>
-                    <span className="bg-emerald-100 text-emerald-700 text-xs font-black px-3 py-1 rounded-full">
-                      {record.results[0]?.confidence}% Match
+          <div className="grid gap-3">
+            {records.map((record) => {
+              // 1. Logic inside map must be inside curly braces
+              const styles = getModelStyles(record.modelUsed);
+              
+              // 2. Must use explicit return
+              return (
+                <div
+                  key={record.id}
+                  onClick={() => router.push(`/history/${record.id}`)}
+                  className="group bg-white rounded-2xl p-4 border border-slate-100 shadow-sm hover:border-indigo-200 hover:shadow-md transition-all cursor-pointer flex items-center gap-5"
+                >
+                  {/* Compact Date */}
+                  <div
+                    className={`flex flex-col items-center justify-center ${styles.bg} rounded-xl px-3 py-2 min-w-[80px]`}
+                  >
+                    <span
+                      className={`text-[9px] font-black ${styles.dateText} uppercase tracking-tighter`}
+                    >
+                      {new Date(record.createdAt).toLocaleDateString("en-GB", {
+                        month: "short",
+                        year: "2-digit",
+                      })}
+                    </span>
+                    <span
+                      className={`text-xl font-black ${styles.dateNum} leading-none my-0.5`}
+                    >
+                      {new Date(record.createdAt).getDate()}
+                    </span>
+                    <span
+                      className={`text-[9px] font-bold ${styles.text} tabular-nums opacity-70`}
+                    >
+                      {new Date(record.createdAt).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </span>
                   </div>
-                </div>
 
-                {/* Model Badge & Action */}
-                <div className="flex items-center gap-6 w-full md:w-auto border-t md:border-t-0 pt-4 md:pt-0">
-                  <div className="hidden lg:block text-right">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Engine Used</p>
-                    <p className="text-sm font-bold text-indigo-600 capitalize">{record.modelUsed || 'Standard'}</p>
+                  {/* Info Area */}
+                  <div className="flex-1 overflow-hidden">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">
+                        Primary Diagnosis
+                      </span>                      
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-lg font-black text-slate-800 truncate">
+                        {record.results[0]?.disease}
+                      </h3>
+                      <span
+                        className={`${styles.badge} text-[10px] font-black px-2.5 py-1 rounded-lg border shadow-sm whitespace-nowrap`}
+                      >
+                        {record.results[0]?.confidence}%
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-1">
+                      <div className="flex flex-wrap gap-1.5 mt-2 h-5 overflow-hidden">
+                        {record.symptoms.map((s, i) => (
+                          <span
+                            key={i}
+                            className="text-[9px] font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 whitespace-nowrap"
+                          >
+                            {s.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  <button 
-                    className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-2xl font-bold hover:bg-black transition-all active:scale-95"
-                  >
-                    View Full Report <ChevronRight size={18} />
-                  </button>
+
+                  {/* Match & Arrow */}
+                  <div className="flex items-center gap-4">
+                    <div className="text-right min-w-[60px]">
+                      <span className={`text-[9px] font-bold ${styles.text} uppercase capitalize`}>
+                        {record.modelUsed} Engine
+                      </span>
+                    </div>
+                    <div className={`h-8 w-8 rounded-full ${styles.bg} flex items-center justify-center ${styles.hoverBg} group-hover:text-white transition-colors`}>
+  <ChevronRight size={16} className={`${styles.text} group-hover:text-white`} />
+</div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
-
-        <footer className="mt-12 flex items-center gap-2 text-slate-400 text-xs bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100/50">
-          <AlertCircle size={14} />
-          <span>These records are for informational purposes only. Always verify with a healthcare professional before taking action.</span>
-        </footer>
       </div>
     </div>
   );

@@ -15,8 +15,8 @@ import { signOut, useSession } from "next-auth/react";
 
 const navItems = [
   { name: "My Appointments", href: "/appointments", icon: Calendar },
-  { name: "Past Predictions", href: "/history", icon: History },
-  { name: "Prediction Models", href: "/models", icon: Database },
+  { name: "Saved Reports", href: "/history", icon: History },
+  { name: "Diagnostic Models", href: "/models", icon: Database },
   { name: "Health Trends", href: "/trends", icon: LineChart },
   { name: "Ask AI", href: "/chat", icon: MessageSquare },
 

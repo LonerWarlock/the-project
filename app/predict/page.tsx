@@ -1,10 +1,21 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Bookmark, Search, Activity, ChevronRight, Loader2 } from "lucide-react";
+import {
+  Search,
+  Activity,
+  Loader2,
+  ChevronRight,
+  ArrowLeft,
+} from "lucide-react";
 import { ALL_SYMPTOMS } from "@/lib/symptoms-list";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import DiagnosisReport from "@/components/DiagnosisReport";
+
+// Utility to format symptom names (e.g., muscle_wasting -> Muscle Wasting)
+const formatName = (name: string) =>
+  name.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
 
 const COMMON_SYMPTOMS = [
   "fatigue",
@@ -19,29 +30,28 @@ const COMMON_SYMPTOMS = [
   "chills",
 ];
 
-const formatName = (name: string) =>
-  name.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
-
 export default function PredictPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  // --- 1. All Hooks (State, Memo, Effects) must be at the very top ---
+  // --- State Hooks ---
   const [isExpanded, setIsExpanded] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [related, setRelated] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [predictions, setPredictions] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showReport, setShowReport] = useState(false);
 
-  // Authentication Redirect Hook
+  // --- Auth Guard ---
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/");
     }
   }, [status, router]);
 
-  // Filtering Logic
+  // --- Memoized Logic ---
   const visibleElsewhere = useMemo(
     () => new Set([...COMMON_SYMPTOMS, ...selected, ...related]),
     [selected, related],
@@ -54,22 +64,23 @@ export default function PredictPage() {
 
   const displayedOthers = isExpanded
     ? otherSymptoms
-    : otherSymptoms.slice(0, 10);
+    : otherSymptoms.slice(0, 12);
 
   const searchResults = useMemo(() => {
-    if (searchQuery.length < 2) return [];
-    const normalizedQuery = searchQuery.toLowerCase().replace(/\s+/g, "_");
+    const query = searchQuery.trim().toLowerCase();
+    if (query.length < 2) return [];
+    const normalizedQuery = query.replace(/\s+/g, "_");
     return ALL_SYMPTOMS.filter((s) => {
       const symptomName = s.toLowerCase();
       return (
         (symptomName.includes(normalizedQuery) ||
-          symptomName.replace(/_/g, " ").includes(searchQuery.toLowerCase())) &&
+          symptomName.replace(/_/g, " ").includes(query)) &&
         !selected.includes(s)
       );
     }).slice(0, 6);
   }, [searchQuery, selected]);
 
-  // Related Symptoms Effect
+  // --- Effects ---
   useEffect(() => {
     const fetchRelated = async () => {
       if (selected.length !== 1) {
@@ -95,20 +106,7 @@ export default function PredictPage() {
     return () => clearTimeout(timer);
   }, [selected]);
 
-  // --- 2. Conditional Returns (After Hooks) ---
-  if (status === "loading") {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <Loader2 className="h-10 w-10 animate-spin text-indigo-600" />
-      </div>
-    );
-  }
-
-  if (!session) {
-    return null;
-  }
-
-  // --- 3. Logic Handlers ---
+  // --- Handlers ---
   const toggleSymptom = (symptom: string) => {
     setSelected((prev) =>
       prev.includes(symptom)
@@ -129,6 +127,7 @@ export default function PredictPage() {
       });
       const data = await res.json();
       setPredictions(data.predictions);
+      setShowReport(true);
     } catch (err) {
       alert("Error generating prediction.");
     } finally {
@@ -137,238 +136,295 @@ export default function PredictPage() {
   };
 
   const savePrediction = async () => {
+    if (!predictions) return;
+    setIsSaving(true);
     try {
-      await fetch("/api/predictions/save", {
+      const res = await fetch("/api/predictions/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           symptoms: selected,
           results: predictions,
-          userEmail: session.user?.email,
+          modelUsed: "basic",
         }),
       });
-      alert("Saved to history!");
+      if (res.ok) router.push("/history");
+      else {
+        const errorData = await res.json();
+        alert(`Error: ${errorData.error || "Failed to save"}`);
+      }
     } catch (err) {
-      alert("Failed to save record.");
+      console.error("Save error:", err);
+      alert("Network error. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  // --- 4. Main UI Render ---
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  if (status === "loading") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <Loader2 className="h-10 w-10 animate-spin text-amber-600" />
+      </div>
+    );
+  }
+
+  if (!session) return null;
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 p-6 md:p-12 font-sans">
-      <div className="max-w-3xl mx-auto">
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-extrabold text-indigo-900 mb-2">
-            AI Diagnostic Tool
-          </h1>
-          <p className="text-slate-500">
-            Authenticated as <span className="font-semibold">{session.user?.email}</span>
-          </p>
-        </div>
+    <div
+      className={`${showReport ? "h-screen overflow-hidden" : "min-h-screen"} bg-slate-50 text-slate-800 p-4 font-sans flex flex-col transition-all duration-300`}
+    >
+      <div className="max-w-3xl mx-auto w-full flex-1 flex flex-col overflow-hidden">
+        {showReport && predictions ? (
+          /* --- REPORT VIEW MODE --- */
+          <div className="h-[calc(100vh-2rem)] flex flex-col animate-in fade-in zoom-in-95 duration-500 overflow-hidden">
+            {/* --- TOP BAR: BACK & SAVE --- */}
+            <div className="flex items-center justify-between mb-4 bg-slate-50/80 backdrop-blur-sm sticky top-0 z-10 py-2">
+              <button
+                onClick={() => setShowReport(false)}
+                className="flex items-center gap-2 text-[10px] font-black text-amber-600 hover:text-amber-800 transition-colors uppercase tracking-[0.2em]"
+              >
+                <ArrowLeft size={14} /> Edit
+              </button>
 
-        {/* 1. SEARCH BAR */}
-        <div className="relative mb-8">
-          <input
-            type="text"
-            placeholder="Search symptoms (e.g., abdominal pain)..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full p-4 pl-6 rounded-2xl border-2 border-slate-200 focus:border-indigo-500 focus:outline-none shadow-sm text-lg transition-all"
-          />
-
-          {searchResults.length > 0 && (
-            <div className="absolute z-10 w-full bg-white border-2 border-slate-100 rounded-2xl shadow-xl mt-2 overflow-hidden">
-              {searchResults.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => {
-                    toggleSymptom(s);
-                    setSearchQuery("");
-                  }}
-                  className="w-full text-left p-4 hover:bg-indigo-50 border-b last:border-none transition-colors flex justify-between items-center group"
-                >
-                  <span className="font-medium">{formatName(s)}</span>
-                  <span className="text-indigo-400 opacity-0 group-hover:opacity-100 font-bold">
-                    + Add
-                  </span>
-                </button>
-              ))}
+              <button
+                onClick={savePrediction}
+                disabled={isSaving}
+                className="flex items-center gap-2 bg-amber-900 text-amber-100 hover:text-amber-900 hover:border px-5 py-2.5 rounded-xl text-[10px] font-black hover:bg-amber-100 transition-all shadow-lg active:scale-95 disabled:opacity-50 uppercase tracking-widest"
+              >
+                <Activity size={14} />
+                {isSaving ? "Saving..." : "Save Record"}
+              </button>
             </div>
-          )}
-        </div>
 
-        {/* 2. SELECTED SYMPTOMS AREA */}
-        <div className="mb-8 min-h-[60px]">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Selected Symptoms
-            </h3>
-
-            {selected.length > 0 && (
-              <button
-                onClick={() => {
-                  setSelected([]);
-                  setPredictions(null);
-                  setRelated([]);
-                }}
-                className="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors uppercase tracking-wider active:scale-95"
-              >
-                Clear All
-              </button>
-            )}
+            <DiagnosisReport
+              symptoms={selected}
+              results={predictions}
+              date={new Date().toISOString()}
+              engine="Basic"
+            />
           </div>
+        ) : (
+          /* --- SELECTION UI MODE --- */
+          <div className="relative animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="mb-4 text-center">
+              <h1 className="text-4xl font-black text-amber-900 mb-2 tracking-tight">
+                Basic Diagnosis
+              </h1>
+              <p className="text-xs font-bold text-slate-400 tracking-widest">
+                ID:{" "}
+                <span className="text-amber-600">{session.user?.email}</span>
+              </p>
+            </div>
 
-          <div className="flex flex-wrap gap-3">
-            {selected.length === 0 && (
-              <span className="text-slate-400 text-sm italic">
-                No symptoms selected yet...
-              </span>
-            )}
-            {selected.map((s) => (
-              <button
-                key={s}
-                onClick={() => toggleSymptom(s)}
-                className="group flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-full text-sm font-medium shadow-md transition-all hover:bg-indigo-700 hover:shadow-lg"
-              >
-                <span>✓</span> {formatName(s)}{" "}
-                <span className="ml-1 opacity-60 group-hover:opacity-100 text-lg">
-                  ×
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
+            {/* 1. COMPACT SEARCH & ACTION ROW */}
+            <div className="flex items-center gap-2 mb-4">
+              <div className="relative flex-1">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-600 z-10">
+                  <Search size={16} />
+                </div>
+                <input
+                  type="text"
+                  placeholder="What's troubling you?"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full py-3 pl-11 pr-4 rounded-xl border border-amber-300 focus:border-amber-700 focus:outline-none shadow-sm text-amber-700 text-sm transition-all bg-white"
+                />
 
-        {/* 3. SUGGESTED SYMPTOMS */}
-        {related.length > 0 && (
-          <div className="mb-8 p-5 bg-indigo-50 border border-indigo-100 rounded-2xl">
-            <h3 className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-3">
-              Suggested for you
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {related
-                .filter((s) => !selected.includes(s))
-                .map((s) => (
+                {/* Search Dropdown stays relative to the input */}
+                {searchQuery.trim().length >= 2 && (
+                  <div className="absolute z-20 w-full bg-white/95 backdrop-blur-md border border-slate-200 rounded-xl shadow-xl mt-1.5 overflow-hidden ring-2 ring-black/5 animate-in slide-in-from-top-1 duration-150">
+                    {searchResults.length > 0 ? (
+                      <>
+                        <div className="px-3 py-1.5 bg-slate-50/80 border-b border-slate-100 flex justify-between items-center">
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                            Suggestions
+                          </span>
+                          <span className="text-[9px] font-bold text-amber-500 uppercase italic">
+                            {searchResults.length} matches
+                          </span>
+                        </div>
+                        <div className="max-h-[240px] overflow-y-auto">
+                          {searchResults.map((s) => (
+                            <button
+                              key={s}
+                              onClick={() => {
+                                toggleSymptom(s);
+                                setSearchQuery("");
+                              }}
+                              className="w-full text-left px-3 py-2.5 hover:bg-amber-50/50 border-b border-slate-50 last:border-none transition-all flex justify-between items-center group active:bg-amber-100"
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <div className="h-1.5 w-1.5 rounded-full bg-slate-200 group-hover:bg-amber-400 transition-colors" />
+                                <span className="text-xs font-bold text-slate-700 group-hover:text-amber-900 transition-colors">
+                                  {formatName(s)}
+                                </span>
+                              </div>
+                              <ChevronRight
+                                size={12}
+                                className="text-slate-300 group-hover:text-amber-500"
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="py-6 text-center text-xs font-black text-slate-500 uppercase">
+                        No symptoms found
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* ANALYSIS BUTTON */}
+              <div className="shrink-0 relative">
+                {" "}
+                {/* relative is key for tooltip positioning */}
+                <button
+                  onClick={() => {
+                    if (selected.length < 3) {
+                      setShowTooltip(true);
+                      setTimeout(() => setShowTooltip(false), 2000);
+                      return;
+                    }
+                    handlePredict();
+                  }}
+                  disabled={loading}
+                  className={`flex items-center gap-2 px-6 py-3 rounded-xl font-black text-sm transition-all active:scale-95 shadow-md border-[3px] 
+      ${
+        selected.length < 3
+          ? "bg-slate-100 text-slate-400 border-slate-300 cursor-not-allowed"
+          : "bg-amber-100 text-amber-900 border-amber-900 hover:bg-amber-900 hover:text-white"
+      }`}
+                >
+                  {loading ? (
+                    <Loader2 className="animate-spin" size={16} />
+                  ) : (
+                    <Activity size={16} />
+                  )}
+                  {loading ? "..." : "Analyze"}
+                </button>
+                {/* DIALOGUE / TOOLTIP */}
+                {showTooltip && (
+                  <div className="absolute bottom-full mb-3 right-0 w-48 bg-slate-900 text-white p-3 rounded-xl shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-200 z-50">
+                    <div className="relative text-[10px] font-bold leading-tight uppercase tracking-wider text-center">
+                      Select at least {3 - selected.length} more symptoms to
+                      analyze
+                      {/* Little triangle pointer */}
+                      <div className="absolute top-full right-6 mt-3 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-slate-900"></div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 2. Selected Symptoms */}
+            <div className="mb-4 min-h-[40px]">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-[10px] font-black text-amber-800 uppercase tracking-[0.2em]">
+                  Selected
+                </h3>
+                {selected.length > 0 && (
+                  <button
+                    onClick={() => setSelected([])}
+                    className="text-[10px] font-black text-amber-600 hover:text-amber-800 uppercase tracking-widest transition-colors"
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {selected.length === 0 && (
+                  <span className="text-slate-400 text-xs italic">
+                    Select at least 3 symptoms to begin...
+                  </span>
+                )}
+                {selected.map((s) => (
                   <button
                     key={s}
                     onClick={() => toggleSymptom(s)}
-                    className="bg-white text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-indigo-600 hover:text-white transition-colors"
+                    className="group flex items-center gap-1.5 bg-amber-600 text-white pl-3 pr-2 py-1 rounded-lg text-xs font-bold shadow-sm hover:bg-amber-700 transition-all"
                   >
-                    + {formatName(s)}
+                    {formatName(s)}{" "}
+                    <span className="opacity-60 text-sm">×</span>
                   </button>
                 ))}
+              </div>
             </div>
-          </div>
-        )}
 
-        {/* 4. COMMON SYMPTOMS */}
-        <div className="mb-8">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
-            Common Symptoms
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {COMMON_SYMPTOMS.map(
-              (s) =>
-                !selected.includes(s) && (
-                  <button
-                    key={s}
-                    onClick={() => toggleSymptom(s)}
-                    className="bg-white text-slate-600 border border-slate-200 px-4 py-2 rounded-xl text-sm hover:border-indigo-300 hover:bg-indigo-50 transition-all"
-                  >
-                    {formatName(s)}
-                  </button>
-                ),
-            )}
-          </div>
-        </div>
-
-        {/* 5. DISCOVER ALL SYMPTOMS (Collapsible) */}
-        <div className="mb-10 pt-8 border-t border-slate-200">
-          <div className="mb-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-              Discover All Symptoms
-            </h3>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {displayedOthers.map((s) => (
-              <button
-                key={s}
-                onClick={() => toggleSymptom(s)}
-                className="bg-slate-100 text-slate-600 border border-slate-200 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-slate-200 active:scale-95 transition-all"
-              >
-                + {formatName(s)}
-              </button>
-            ))}
-          </div>
-
-          {otherSymptoms.length > 10 && (
-            <div className="mt-6 flex justify-center">
-              <button
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-6 py-2 rounded-full transition-colors border border-indigo-100 shadow-sm"
-              >
-                {isExpanded ? "Show Less Symptoms ↑" : "View All Symptoms ↓"}
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* 6. PREDICT ACTION */}
-        <div className="flex flex-col items-center mb-12">
-          {selected.length >= 3 ? (
-            <button
-              onClick={handlePredict}
-              disabled={loading}
-              className="bg-indigo-600 text-white text-xl font-bold px-12 py-4 rounded-2xl shadow-xl hover:bg-indigo-700 hover:scale-105 active:scale-95 transition-all disabled:opacity-70 disabled:scale-100"
-            >
-              {loading ? "Analysing Symptoms..." : "Run AI Diagnosis"}
-            </button>
-          ) : (
-            <div className="text-slate-400 text-sm bg-slate-200 px-6 py-2 rounded-full font-medium">
-              Select {3 - selected.length} more to start analysis
-            </div>
-          )}
-        </div>
-
-        {/* 7. RESULTS */}
-        {predictions && (
-          <div className="bg-white border-2 border-slate-100 rounded-3xl p-8 shadow-2xl animate-in fade-in zoom-in-95 duration-500">
-            <h2 className="text-2xl font-bold text-slate-800 mb-6 border-b pb-4">
-              Diagnosis Results
-            </h2>
-            <div className="space-y-4">
-              {predictions.map((p, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between p-5 bg-slate-50 rounded-2xl border border-slate-100"
-                >
-                  <span className="font-semibold text-lg text-slate-700">
-                    {p.disease}
-                  </span>
-                  <div className="flex flex-col items-end">
-                    <span className="font-bold text-indigo-600 text-xl">
-                      {p.confidence}%
-                    </span>
-                    <span className="text-[10px] text-slate-400 uppercase font-bold">
-                      Match
-                    </span>
-                  </div>
+            {/* 3. Suggestions */}
+            {related.length > 0 && (
+              <div className="mb-3 p-4 bg-amber-100 border border-amber-500 rounded-2xl">
+                <h3 className="text-[10px] font-black text-amber-800 uppercase tracking-[0.2em] mb-3">
+                  Recommended
+                </h3>
+                <div className="flex flex-wrap gap-1.5">
+                  {related.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => toggleSymptom(s)}
+                      className="bg-white text-amber-700 border border-amber-200 px-3 py-1 rounded-md text-xs font-bold hover:bg-amber-600 hover:text-white transition-all"
+                    >
+                      + {formatName(s)}
+                    </button>
+                  ))}
                 </div>
-              ))}
+              </div>
+            )}
+
+            {/* 4. Common & Discover Unified Grid */}
+            <div className="space-y-4">
+              <section>
+                <h3 className="text-[10px] font-black text-amber-800 uppercase tracking-[0.2em] mb-3">
+                  Quick Select
+                </h3>
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                  {COMMON_SYMPTOMS.map(
+                    (s) =>
+                      !selected.includes(s) && (
+                        <button
+                          key={s}
+                          onClick={() => toggleSymptom(s)}
+                          className="text-left px-3 py-2.5 rounded-xl bg-white border border-amber-100 text-amber-600 text-[11px] font-bold hover:border-amber-600 hover:bg-amber-50 transition-all truncate shadow-sm"
+                        >
+                          {formatName(s)}
+                        </button>
+                      ),
+                  )}
+                </div>
+              </section>
+
+              <section className="pt-6 pb-3 border-t border-slate-200">
+                <h3 className="text-[10px] font-black text-amber-800 uppercase tracking-[0.2em] mb-3">
+                  Symptom Library
+                </h3>
+                <div className="flex flex-wrap gap-1.5">
+                  {displayedOthers.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => toggleSymptom(s)}
+                      className="inline-flex items-center px-3 py-2 rounded-lg bg-slate-50/50 border border-amber-400 text-amber-800 text-[12px] tracking-tight hover:border-amber-400 hover:bg-white hover:text-amber-700 transition-all whitespace-nowrap"
+                    >
+                      {formatName(s)}
+                    </button>
+                  ))}
+                </div>
+                {otherSymptoms.length > 12 && (
+                  <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="w-full mt-4 py-2.5 text-[10px] font-black text-amber-600 uppercase tracking-widest bg-white border border-amber-100 rounded-xl hover:bg-amber-50 transition-colors"
+                  >
+                    {isExpanded
+                      ? "Collapse ↑"
+                      : `Show ${otherSymptoms.length - 12} More ↓`}
+                  </button>
+                )}
+              </section>
             </div>
-
-            <button
-              onClick={savePrediction}
-              className="mt-8 flex items-center justify-center gap-2 w-full bg-slate-900 text-white p-4 rounded-2xl font-bold hover:bg-black transition-all shadow-lg active:scale-95"
-            >
-              <Bookmark size={20} /> Save to My Records
-            </button>
-
-            <p className="mt-6 text-xs text-slate-400 text-center italic leading-relaxed">
-              Disclaimer: This is an AI-generated assessment for informational
-              purposes only. Consult a healthcare professional for actual medical advice.
-            </p>
           </div>
         )}
       </div>
