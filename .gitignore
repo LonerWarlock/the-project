@@ -47,3 +47,5 @@ next-env.d.ts
 lib/csv/dataset_246946.csv
 
 /lib/generated/prisma
+
+/lib/generated/prisma
