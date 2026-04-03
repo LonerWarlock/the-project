@@ -2,12 +2,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import {
-  History,
-  ChevronRight,
-  Activity,
-  Loader2,
-} from "lucide-react";
+import { History, ChevronRight, Activity, Loader2 } from "lucide-react";
 
 interface PredictionRecord {
   id: string;
@@ -28,7 +23,7 @@ const getModelStyles = (model: string) => {
         badge: "bg-indigo-100 text-indigo-700 border-indigo-200",
         dateText: "text-indigo-300",
         dateNum: "text-indigo-900",
-        hoverBg: "group-hover:bg-indigo-600"
+        hoverBg: "group-hover:bg-indigo-600",
       };
     case "skin":
       return {
@@ -38,7 +33,7 @@ const getModelStyles = (model: string) => {
         badge: "bg-emerald-100 text-emerald-700 border-emerald-200",
         dateText: "text-emerald-300",
         dateNum: "text-emerald-900",
-        hoverBg: "group-hover:bg-emerald-600"
+        hoverBg: "group-hover:bg-emerald-600",
       };
     default: // basic
       return {
@@ -48,7 +43,7 @@ const getModelStyles = (model: string) => {
         badge: "bg-amber-100 text-amber-700 border-amber-200",
         dateText: "text-amber-300",
         dateNum: "text-amber-900",
-        hoverBg: "group-hover:bg-amber-600"
+        hoverBg: "group-hover:bg-amber-600",
       };
   }
 };
@@ -107,7 +102,7 @@ export default function HistoryPage() {
             {records.map((record) => {
               // 1. Logic inside map must be inside curly braces
               const styles = getModelStyles(record.modelUsed);
-              
+
               // 2. Must use explicit return
               return (
                 <div
@@ -147,7 +142,7 @@ export default function HistoryPage() {
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">
                         Primary Diagnosis
-                      </span>                      
+                      </span>
                     </div>
                     <div className="flex items-center gap-3">
                       <h3 className="text-lg font-black text-slate-800 truncate">
@@ -166,7 +161,9 @@ export default function HistoryPage() {
                             key={i}
                             className="text-[9px] font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 whitespace-nowrap"
                           >
-                            {s.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())}
+                            {s
+                              .replace(/_/g, " ")
+                              .replace(/\b\w/g, (char) => char.toUpperCase())}
                           </span>
                         ))}
                       </div>
@@ -176,13 +173,20 @@ export default function HistoryPage() {
                   {/* Match & Arrow */}
                   <div className="flex items-center gap-4">
                     <div className="text-right min-w-[60px]">
-                      <span className={`text-[9px] font-bold ${styles.text} uppercase capitalize`}>
+                      <span
+                        className={`text-[9px] font-bold ${styles.text} uppercase capitalize`}
+                      >
                         {record.modelUsed} Engine
                       </span>
                     </div>
-                    <div className={`h-8 w-8 rounded-full ${styles.bg} flex items-center justify-center ${styles.hoverBg} group-hover:text-white transition-colors`}>
-  <ChevronRight size={16} className={`${styles.text} group-hover:text-white`} />
-</div>
+                    <div
+                      className={`h-8 w-8 rounded-full ${styles.bg} flex items-center justify-center ${styles.hoverBg} group-hover:text-white transition-colors`}
+                    >
+                      <ChevronRight
+                        size={16}
+                        className={`${styles.text} group-hover:text-white`}
+                      />
+                    </div>
                   </div>
                 </div>
               );

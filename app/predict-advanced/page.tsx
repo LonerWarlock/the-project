@@ -11,7 +11,7 @@ import {
 import { ALL_SYMPTOMS } from "@/lib/symptoms-list";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import DiagnosisReport from "@/components/DiagnosisReport";
+import DiagnosisReportAdv from "@/components/DiagnosisReportAdv";
 
 // Utility to format symptom names (e.g., muscle_wasting -> Muscle Wasting)
 const formatName = (name: string) =>
@@ -145,7 +145,7 @@ export default function PredictPage() {
         body: JSON.stringify({
           symptoms: selected,
           results: predictions,
-          modelUsed: "basic",
+          modelUsed: "advanced",
         }),
       });
       if (res.ok) router.push("/history");
@@ -166,7 +166,7 @@ export default function PredictPage() {
   if (status === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <Loader2 className="h-10 w-10 animate-spin text-amber-600" />
+        <Loader2 className="h-10 w-10 animate-spin text-indigo-600" />
       </div>
     );
   }
@@ -185,7 +185,7 @@ export default function PredictPage() {
             <div className="flex items-center justify-between mb-4 bg-slate-50/80 backdrop-blur-sm sticky top-0 z-10 py-2">
               <button
                 onClick={() => setShowReport(false)}
-                className="flex items-center gap-2 text-[10px] font-black text-amber-600 hover:text-amber-800 transition-colors uppercase tracking-[0.2em]"
+                className="flex items-center gap-2 text-[10px] font-black text-indigo-600 hover:text-indigo-800 transition-colors uppercase tracking-[0.2em]"
               >
                 <ArrowLeft size={14} /> Edit
               </button>
@@ -193,37 +193,37 @@ export default function PredictPage() {
               <button
                 onClick={savePrediction}
                 disabled={isSaving}
-                className="flex items-center gap-2 bg-amber-900 text-amber-100 hover:text-amber-900 hover:border px-5 py-2.5 rounded-xl text-[10px] font-black hover:bg-amber-100 transition-all shadow-lg active:scale-95 disabled:opacity-50 uppercase tracking-widest"
+                className="flex items-center gap-2 bg-indigo-900 text-indigo-100 hover:text-indigo-900 hover:border px-5 py-2.5 rounded-xl text-[10px] font-black hover:bg-indigo-100 transition-all shadow-lg active:scale-95 disabled:opacity-50 uppercase tracking-widest"
               >
                 <Activity size={14} />
                 {isSaving ? "Saving..." : "Save Record"}
               </button>
             </div>
 
-            <DiagnosisReport
+            <DiagnosisReportAdv
               symptoms={selected}
               results={predictions}
               date={new Date().toISOString()}
-              engine="Basic"
+              engine="Advanced"
             />
           </div>
         ) : (
           /* --- SELECTION UI MODE --- */
           <div className="relative animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="mb-4 text-center">
-              <h1 className="text-4xl font-black text-amber-600 mb-2 tracking-tight">
-                Basic Diagnosis
+              <h1 className="text-4xl font-black text-indigo-600 mb-2 tracking-tight">
+                Advanced Diagnosis
               </h1>
               <p className="text-xs font-bold text-slate-400 tracking-widest">
                 ID:{" "}
-                <span className="text-amber-600">{session.user?.email}</span>
+                <span className="text-indigo-600">{session.user?.email}</span>
               </p>
             </div>
 
             {/* 1. COMPACT SEARCH & ACTION ROW */}
             <div className="flex items-center gap-2 mb-4">
               <div className="relative flex-1">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-600 z-10">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-600 z-10">
                   <Search size={16} />
                 </div>
                 <input
@@ -231,7 +231,7 @@ export default function PredictPage() {
                   placeholder="What's troubling you?"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full py-3 pl-11 pr-4 rounded-xl border border-amber-300 focus:border-amber-700 focus:outline-none shadow-sm text-amber-700 text-sm transition-all bg-white"
+                  className="w-full py-3 pl-11 pr-4 rounded-xl border border-indigo-300 focus:border-indigo-700 focus:outline-none shadow-sm text-indigo-700 text-sm transition-all bg-white"
                 />
 
                 {/* Search Dropdown stays relative to the input */}
@@ -243,7 +243,7 @@ export default function PredictPage() {
                           <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
                             Suggestions
                           </span>
-                          <span className="text-[9px] font-bold text-amber-500 uppercase italic">
+                          <span className="text-[9px] font-bold text-indigo-500 uppercase italic">
                             {searchResults.length} matches
                           </span>
                         </div>
@@ -255,17 +255,17 @@ export default function PredictPage() {
                                 toggleSymptom(s);
                                 setSearchQuery("");
                               }}
-                              className="w-full text-left px-3 py-2.5 hover:bg-amber-50/50 border-b border-slate-50 last:border-none transition-all flex justify-between items-center group active:bg-amber-100"
+                              className="w-full text-left px-3 py-2.5 hover:bg-indigo-50/50 border-b border-slate-50 last:border-none transition-all flex justify-between items-center group active:bg-indigo-100"
                             >
                               <div className="flex items-center gap-2.5">
-                                <div className="h-1.5 w-1.5 rounded-full bg-slate-200 group-hover:bg-amber-400 transition-colors" />
-                                <span className="text-xs font-bold text-slate-700 group-hover:text-amber-900 transition-colors">
+                                <div className="h-1.5 w-1.5 rounded-full bg-slate-200 group-hover:bg-indigo-400 transition-colors" />
+                                <span className="text-xs font-bold text-slate-700 group-hover:text-indigo-900 transition-colors">
                                   {formatName(s)}
                                 </span>
                               </div>
                               <ChevronRight
                                 size={12}
-                                className="text-slate-300 group-hover:text-amber-500"
+                                className="text-slate-300 group-hover:text-indigo-500"
                               />
                             </button>
                           ))}
@@ -298,7 +298,7 @@ export default function PredictPage() {
       ${
         selected.length < 3
           ? "bg-slate-100 text-slate-400 border-slate-300 cursor-not-allowed"
-          : "bg-amber-100 text-amber-900 border-amber-900 hover:bg-amber-900 hover:text-white"
+          : "bg-indigo-100 text-indigo-900 border-indigo-900 hover:bg-indigo-900 hover:text-white"
       }`}
                 >
                   {loading ? (
@@ -325,13 +325,13 @@ export default function PredictPage() {
             {/* 2. Selected Symptoms */}
             <div className="mb-4 min-h-[40px]">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-[10px] font-black text-amber-800 uppercase tracking-[0.2em]">
+                <h3 className="text-[10px] font-black text-indigo-800 uppercase tracking-[0.2em]">
                   Selected
                 </h3>
                 {selected.length > 0 && (
                   <button
                     onClick={() => setSelected([])}
-                    className="text-[10px] font-black text-amber-600 hover:text-amber-800 uppercase tracking-widest transition-colors"
+                    className="text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-widest transition-colors"
                   >
                     Clear All
                   </button>
@@ -347,7 +347,7 @@ export default function PredictPage() {
                   <button
                     key={s}
                     onClick={() => toggleSymptom(s)}
-                    className="group flex items-center gap-1.5 bg-amber-600 text-white pl-3 pr-2 py-1 rounded-lg text-xs font-bold shadow-sm hover:bg-amber-700 transition-all"
+                    className="group flex items-center gap-1.5 bg-indigo-600 text-white pl-3 pr-2 py-1 rounded-lg text-xs font-bold shadow-sm hover:bg-indigo-700 transition-all"
                   >
                     {formatName(s)}{" "}
                     <span className="opacity-60 text-sm">×</span>
@@ -358,8 +358,8 @@ export default function PredictPage() {
 
             {/* 3. Suggestions */}
             {related.length > 0 && (
-              <div className="mb-3 p-4 bg-amber-100 border border-amber-500 rounded-2xl">
-                <h3 className="text-[10px] font-black text-amber-800 uppercase tracking-[0.2em] mb-3">
+              <div className="mb-3 p-4 bg-indigo-100 border border-indigo-500 rounded-2xl">
+                <h3 className="text-[10px] font-black text-indigo-800 uppercase tracking-[0.2em] mb-3">
                   Recommended
                 </h3>
                 <div className="flex flex-wrap gap-1.5">
@@ -367,7 +367,7 @@ export default function PredictPage() {
                     <button
                       key={s}
                       onClick={() => toggleSymptom(s)}
-                      className="bg-white text-amber-700 border border-amber-200 px-3 py-1 rounded-md text-xs font-bold hover:bg-amber-600 hover:text-white transition-all"
+                      className="bg-white text-indigo-700 border border-indigo-200 px-3 py-1 rounded-md text-xs font-bold hover:bg-indigo-600 hover:text-white transition-all"
                     >
                       + {formatName(s)}
                     </button>
@@ -379,7 +379,7 @@ export default function PredictPage() {
             {/* 4. Common & Discover Unified Grid */}
             <div className="space-y-4">
               <section>
-                <h3 className="text-[10px] font-black text-amber-800 uppercase tracking-[0.2em] mb-3">
+                <h3 className="text-[10px] font-black text-indigo-800 uppercase tracking-[0.2em] mb-3">
                   Quick Select
                 </h3>
                 <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
@@ -389,7 +389,7 @@ export default function PredictPage() {
                         <button
                           key={s}
                           onClick={() => toggleSymptom(s)}
-                          className="text-left px-3 py-2.5 rounded-xl bg-white border border-amber-100 text-amber-600 text-[11px] font-bold hover:border-amber-600 hover:bg-amber-50 transition-all truncate shadow-sm"
+                          className="text-left px-3 py-2.5 rounded-xl bg-white border border-indigo-100 text-indigo-600 text-[11px] font-bold hover:border-indigo-600 hover:bg-indigo-50 transition-all truncate shadow-sm"
                         >
                           {formatName(s)}
                         </button>
@@ -399,7 +399,7 @@ export default function PredictPage() {
               </section>
 
               <section className="pt-6 pb-3 border-t border-slate-200">
-                <h3 className="text-[10px] font-black text-amber-800 uppercase tracking-[0.2em] mb-3">
+                <h3 className="text-[10px] font-black text-indigo-800 uppercase tracking-[0.2em] mb-3">
                   Symptom Library
                 </h3>
                 <div className="flex flex-wrap gap-1.5">
@@ -407,7 +407,7 @@ export default function PredictPage() {
                     <button
                       key={s}
                       onClick={() => toggleSymptom(s)}
-                      className="inline-flex items-center px-3 py-2 rounded-lg bg-slate-50/50 border border-amber-400 text-amber-800 text-[12px] tracking-tight hover:border-amber-400 hover:bg-white hover:text-amber-700 transition-all whitespace-nowrap"
+                      className="inline-flex items-center px-3 py-2 rounded-lg bg-slate-50/50 border border-indigo-400 text-indigo-800 text-[12px] tracking-tight hover:border-indigo-400 hover:bg-white hover:text-indigo-700 transition-all whitespace-nowrap"
                     >
                       {formatName(s)}
                     </button>
@@ -416,7 +416,7 @@ export default function PredictPage() {
                 {otherSymptoms.length > 12 && (
                   <button
                     onClick={() => setIsExpanded(!isExpanded)}
-                    className="w-full mt-4 py-2.5 text-[10px] font-black text-amber-600 uppercase tracking-widest bg-white border border-amber-100 rounded-xl hover:bg-amber-50 transition-colors"
+                    className="w-full mt-4 py-2.5 text-[10px] font-black text-indigo-600 uppercase tracking-widest bg-white border border-indigo-100 rounded-xl hover:bg-indigo-50 transition-colors"
                   >
                     {isExpanded
                       ? "Collapse ↑"
