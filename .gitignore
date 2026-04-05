@@ -10,7 +10,7 @@
 !.yarn/releases
 !.yarn/versions
 
-#venv
+#venv -> MUST HAVE
 /venv
 
 # testing
@@ -33,7 +33,7 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files (can opt-in for committing if needed) -> MUST HAVE
 .env*
 
 # vercel
@@ -43,10 +43,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-#large_datasets
+#large_datasets -> MUST HAVE
 lib/csv/dataset_246946.csv
 
 /lib/generated/prisma
 
+#jupyter logs -> MUST HAVE
 .ipynb_checkpoints/
 keras_tuner_dir/
