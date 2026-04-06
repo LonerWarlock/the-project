@@ -11,7 +11,7 @@
 !.yarn/versions
 
 #venv -> MUST HAVE
-/venv
+venv/
 
 # testing
 /coverage
