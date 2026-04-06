@@ -8,25 +8,24 @@ import {
   ChevronRight,
   ArrowLeft,
 } from "lucide-react";
-import { ALL_SYMPTOMS } from "@/lib/symptoms-list";
+import { ALL_SYMPTOMS_ANN } from "@/lib/symptoms-list-ann";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import DiagnosisReportAdv from "@/components/DiagnosisReportAdv";
 
-// Utility to format symptom names (e.g., muscle_wasting -> Muscle Wasting)
 const formatName = (name: string) =>
-  name.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+  name.replace(/\b\w/g, (l) => l.toUpperCase());
 
 const COMMON_SYMPTOMS = [
   "fatigue",
-  "high_fever",
+  "fever",
   "headache",
   "nausea",
   "vomiting",
   "cough",
-  "joint_pain",
-  "skin_rash",
-  "itching",
+  "joint pain",
+  "skin rash",
+  "itching of skin",
   "chills",
 ];
 
@@ -58,7 +57,7 @@ export default function PredictPage() {
   );
 
   const otherSymptoms = useMemo(() => {
-    const uniqueAllSymptoms = Array.from(new Set(ALL_SYMPTOMS));
+    const uniqueAllSymptoms = Array.from(new Set(ALL_SYMPTOMS_ANN));
     return uniqueAllSymptoms.filter((s) => !visibleElsewhere.has(s));
   }, [visibleElsewhere]);
 
@@ -70,11 +69,10 @@ export default function PredictPage() {
     const query = searchQuery.trim().toLowerCase();
     if (query.length < 2) return [];
     const normalizedQuery = query.replace(/\s+/g, "_");
-    return ALL_SYMPTOMS.filter((s) => {
+    return ALL_SYMPTOMS_ANN.filter((s: string) => {
       const symptomName = s.toLowerCase();
       return (
-        (symptomName.includes(normalizedQuery) ||
-          symptomName.replace(/_/g, " ").includes(query)) &&
+        symptomName.includes(normalizedQuery) &&
         !selected.includes(s)
       );
     }).slice(0, 6);
@@ -120,7 +118,7 @@ export default function PredictPage() {
     if (selected.length < 3) return;
     setLoading(true);
     try {
-      const res = await fetch("/api/predict", {
+      const res = await fetch("/api/predict-ann", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ symptoms: selected }),
