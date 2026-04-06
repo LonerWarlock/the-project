@@ -1,97 +1,118 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { 
-  Calendar, 
-  History, 
-  MessageSquare, 
-  Database, 
-  LineChart, 
+import {
+  Calendar,
+  History,
+  MessageSquare,
+  Database,
+  LineChart,
   LogOut,
   Stethoscope,
-  User
+  ChevronRight,
+  ShieldCheck
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
+import { motion } from "framer-motion";
 
 const navItems = [
-  { name: "My Appointments", href: "/appointments", icon: Calendar },
-  { name: "Saved Reports", href: "/history", icon: History },
-  { name: "Diagnostic Models", href: "/models", icon: Database },
-  { name: "Health Trends", href: "/trends", icon: LineChart },
-  { name: "Ask AI", href: "/chat", icon: MessageSquare },
-
+  { name: "Appointments", href: "/appointments", icon: Calendar, desc: "Schedule visits" },
+  { name: "Saved Reports", href: "/history", icon: History, desc: "Clinical archive" },
+  { name: "AI Models", href: "/models", icon: Database, desc: "Diagnostic suite" },
+  { name: "Health Trends", href: "/trends", icon: LineChart, desc: "Vitals tracking" },
+  { name: "Ask AI", href: "/chat", icon: MessageSquare, desc: "Gemini assist" },
 ];
 
 export default function Sidebar() {
   const { data: session, status } = useSession();
   const pathname = usePathname();
 
-  // 3. SIDEBAR MUST BE COMPLETELY INVISIBLE WHEN USER LOGGED OUT
-  if (status !== "authenticated") {
-    return null;
-  }
+  if (status !== "authenticated") return null;
 
   return (
-    <aside className="flex h-screen w-64 flex-col border-r border-slate-200 bg-white p-4 font-sans shadow-sm shrink-0">
-      
-      {/* 1. Header: Redirects to / */}
-      <Link href="/" className="mb-25 px-2 group transition-transform active:scale-95">
-        <div className="flex items-center gap-2 text-indigo-600">
-          <Stethoscope size={28} strokeWidth={2.5} />
-          <h1 className="text-xl font-bold tracking-tight text-indigo-900 group-hover:text-indigo-600 transition-colors">
-            Core2Cover AI
-          </h1>
-        </div>
-        <p className="mt-1 text-xs font-medium text-slate-400 uppercase tracking-widest">
-          Clinical Insights Engine
-        </p>
-      </Link>
+    <aside className="flex h-screen w-72 flex-col border-r border-slate-100 bg-white/80 font-sans backdrop-blur-xl shrink-0 z-50">
 
-      {/* 2. Middle Section: Navigation Tabs */}
-      <nav className="flex-1 space-y-1">
+      {/* 1. Brand Header */}
+      <div className="p-6 pb-4">
+        <Link href="/" className="group block transition-all active:scale-95">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 shadow-lg shadow-indigo-100 group-hover:shadow-indigo-200 transition-all">
+              <Stethoscope size={22} className="text-white" strokeWidth={2.5} />
+            </div>
+            <div>
+              <h1 className="text-lg font-black tracking-tighter text-indigo-950 leading-none">
+                Core2Cover <span className="font-light text-indigo-500">AI</span>
+              </h1>
+              <div className="flex items-center gap-1 mt-1 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                <ShieldCheck size={10} className="text-emerald-500" /> Secure Terminal
+              </div>
+            </div>
+          </div>
+        </Link>
+      </div>
+
+      {/* 2. Navigation Section */}
+      <nav className="flex-1 px-4 space-y-1.5 mt-4">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link
               key={item.name}
               href={item.href}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
-                isActive
-                  ? "bg-indigo-50 text-indigo-700 shadow-sm"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-              }`}
+              className={`group relative flex items-center justify-between rounded-2xl px-4 py-3.5 transition-all ${isActive
+                  ? "bg-indigo-600 text-white shadow-xl shadow-indigo-100"
+                  : "text-slate-500 hover:bg-slate-50 hover:text-indigo-600"
+                }`}
             >
-              <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} />
-              {item.name}
+              <div className="flex items-center gap-3.5">
+                <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold tracking-tight">{item.name}</span>
+                  {!isActive && (
+                    <span className="text-[10px] font-medium text-slate-400 group-hover:text-indigo-400 transition-colors">
+                      {item.desc}
+                    </span>
+                  )}
+                </div>
+              </div>
+              {isActive && (
+                <motion.div layoutId="activeArrow">
+                  <ChevronRight size={14} className="text-indigo-200" />
+                </motion.div>
+              )}
             </Link>
           );
         })}
       </nav>
 
-      {/* 3. Bottom Section: Profile & Logout */}
-      <div className="mt-auto border-t border-slate-100 pt-3">
-        
-        {/* Redirects to /profile */}
-        <Link 
-          href="/profile" 
-          className="mb-1 flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-slate-50 transition-colors group"
+      {/* 3. Bottom Section: Profile & System Controls */}
+      <div className="p-4 mt-auto border-t border-slate-50 bg-slate-50/30 backdrop-blur-sm">
+
+        {/* User Identity Card */}
+        <Link
+          href="/profile"
+          className="group flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm border border-slate-100 transition-all hover:border-indigo-200 hover:shadow-md mb-3"
         >
-          <div className="flex flex-col overflow-hidden">
-            <span className="truncate text-sm font-bold text-slate-800 group-hover:text-indigo-600">
-              {session?.user?.name || "User"}
+          <div className="h-10 w-10 flex-shrink-0 rounded-xl bg-gradient-to-br from-indigo-50 to-slate-100 flex items-center justify-center text-indigo-600 font-black text-sm border border-white">
+            {session?.user?.name?.charAt(0)}
+          </div>
+          <div className="flex flex-col overflow-hidden text-left">
+            <span className="truncate text-xs font-black text-indigo-950 uppercase tracking-tighter">
+              {session?.user?.name || "Practitioner"}
             </span>
-            <span className="truncate text-xs text-slate-400">
-              {session?.user?.email}
+            <span className="truncate text-[10px] font-bold text-slate-400 italic">
+              Active Session
             </span>
           </div>
         </Link>
 
+        {/* System Exit */}
         <button
           onClick={() => signOut({ callbackUrl: "/" })}
-          className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+          className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-[11px] font-black uppercase tracking-widest text-slate-400 transition-all hover:bg-red-50 hover:text-red-600 border border-transparent hover:border-red-100"
         >
-          <LogOut size={20} />
-          Logout
+          <LogOut size={16} />
+          Terminate Session
         </button>
       </div>
     </aside>
