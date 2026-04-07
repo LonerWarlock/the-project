@@ -21,20 +21,22 @@ const models = [
     description: "Our core engine uses a weighted symptom matrix to identify 42 common diseases with high accuracy.",
     icon: <Zap className="text-amber-500" size={32} />,
     color: "border-amber-100 bg-amber-50/30",
+    txtColor: "text-amber-600",
     btnColor: "bg-amber-600 hover:bg-amber-700",
     features: ["Fast Processing", "42+ Diseases", "No History Required"],
-    href: "/predict",
+    href: "/models/predict",
   },
   {
     id: "advanced",
-    title: "Advanced Engine",
-    tagline: "Deep Clinical Insights",
+    title: "Advanced Diagnosis",
+    tagline: "Symptom-based Analysis",
     description: "Powered by Gemini 1.5, this model cross-references symptoms with medical literature for rare conditions.",
     icon: <BrainCircuit className="text-indigo-500" size={32} />,
     color: "border-indigo-100 bg-indigo-50/30",
+    txtColor: "text-indigo-600",
     btnColor: "bg-indigo-600 hover:bg-indigo-700",
     features: ["Gemini AI Powered", "Risk Assessment", "Clinical Logic"],
-    href: "/predict-advanced",
+    href: "/models/predict-advanced",
   },
   {
     id: "skin",
@@ -43,9 +45,10 @@ const models = [
     description: "Upload a clear photo of skin irregularities. Our computer vision model detects patterns of common skin conditions.",
     icon: <Camera className="text-emerald-500" size={32} />,
     color: "border-emerald-100 bg-emerald-50/30",
+    txtColor: "text-emerald-600",
     btnColor: "bg-emerald-600 hover:bg-emerald-700",
     features: ["Image Upload", "Pattern Detection", "Instant Results"],
-    href: "/predict-skin",
+    href: "/models/predict-skin",
   },
 ];
 
@@ -107,10 +110,10 @@ export default function ModelsPage() {
               <h2 className="text-2xl font-black text-slate-800 mb-1">
                 {model.title}
               </h2>
-              <p className="text-indigo-600 font-bold text-xs uppercase tracking-widest mb-3">
+              <p className={` ${model.txtColor} font-bold text-xs uppercase tracking-widest mb-3`}>
                 {model.tagline}
               </p>
-              <p className="text-slate-600 text-sm leading-relaxed mb-4">
+              <p className="text-slate-500 text-sm leading-relaxed mb-4">
                 {model.description}
               </p>
 
