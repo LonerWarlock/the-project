@@ -54,6 +54,7 @@ model Prediction {
   symptoms    String[] // Stores symptoms as an array of strings
   results     Json     // Stores predicted diseases and confidence scores
   modelUsed   String?  // e.g., "basic", "advanced", "skin"
+  imageUrl    String?  // Cloudinary URL for skin diagnosis images
   
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

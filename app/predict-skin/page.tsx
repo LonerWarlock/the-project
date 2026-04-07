@@ -113,16 +113,31 @@ export default function PredictSkinPage() {
   };
 
   const savePrediction = async () => {
-    if (!predictions) return;
+    if (!predictions || !image) return;
     setIsSaving(true);
     try {
+      const uploadFormData = new FormData();
+      uploadFormData.append("image", image);
+
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        body: uploadFormData,
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error("Failed to upload image");
+      }
+
+      const { url } = await uploadRes.json();
+
       const res = await fetch("/api/predictions/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          symptoms: [image?.name || "skin_image"],
+          symptoms: [image.name],
           results: predictions,
-          modelUsed: "dermal_vision",
+          modelUsed: "skin",
+          imageUrl: url,
         }),
       });
       if (res.ok) router.push("/history");

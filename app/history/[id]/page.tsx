@@ -28,10 +28,9 @@ export default function DetailedHistoryPage() {
     );
 
   return (
-    /* --- h-screen and overflow-hidden prevent the browser scrollbar --- */
     <div className="h-screen overflow-hidden bg-slate-50 p-4 font-sans flex flex-col">
       <div className="max-w-3xl mx-auto w-full flex-1 flex flex-col overflow-hidden">
-        {/* --- Header: Consistent with Predict Page --- */}
+        {/* --- Header Section --- */}
         <div className="flex items-center justify-between mb-4 bg-slate-50/80 backdrop-blur-sm shrink-0 py-2">
           <button
             onClick={() => router.back()}
@@ -46,30 +45,33 @@ export default function DetailedHistoryPage() {
             <ArrowLeft size={14} /> Back to History
           </button>
         </div>
-        {record.modelUsed === "basic" ? (
-          <DiagnosisReport
-            symptoms={record.symptoms}
-            results={record.results}
-            date={record.createdAt}
-            engine={record.modelUsed}
-          />
-        ) : (record.modelUsed === "advanced" ? (
+
+        {/* --- Centered Report Container --- */}
+        <div className="flex-1 flex flex-col justify-center overflow-hidden pb-10">
+          {record.modelUsed === "basic" ? (
+            <DiagnosisReport
+              symptoms={record.symptoms}
+              results={record.results}
+              date={record.createdAt}
+              engine={record.modelUsed}
+            />
+          ) : record.modelUsed === "advanced" ? (
             <DiagnosisReportAdv
-            symptoms={record.symptoms}
-            results={record.results}
-            date={record.createdAt}
-            engine={record.modelUsed}
-          />
-        ) : (
-          <DiagnosisReportImg
-            symptoms={record.symptoms}
-            results={record.results}
-            date={record.createdAt}
-            engine={record.modelUsed}
-          />
-        )
-          
-        )}
+              symptoms={record.symptoms}
+              results={record.results}
+              date={record.createdAt}
+              engine={record.modelUsed}
+            />
+          ) : (
+            <DiagnosisReportImg
+              symptoms={record.symptoms}
+              results={record.results}
+              date={record.createdAt}
+              engine={record.modelUsed}
+              imagePreview={record.imageUrl}
+            />
+          )}
+        </div>
       </div>
     </div>
   );
