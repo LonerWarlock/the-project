@@ -91,7 +91,7 @@ export default function PredictPage() {
         const res = await fetch("/api/related_symptoms", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ symptoms: selected }),
+          body: JSON.stringify({ symptoms: selected, modelType: "basic" }),
         });
         const data = await res.json();
         const newRelated = data.related.filter(
