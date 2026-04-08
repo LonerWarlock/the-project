@@ -38,6 +38,39 @@ export default function NewChatPage() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
 
+    const [saving, setSaving] = useState(false);
+
+    const handleSaveToCloud = async () => {
+        if (messages.length < 3 || saving) return;
+        setSaving(true);
+
+        try {
+            const topicName = messages[2]?.content;
+
+            const res = await fetch("/api/chat/save", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    category,
+                    topicName,
+                    messages: messages
+                }),
+            });
+
+            if (res.ok) {
+                // 1. DELETE FROM LOCAL STORAGE
+                localStorage.removeItem(`asclepius_chat_${category}`);
+                router.push("/chat/history");
+            } else {
+                throw new Error("Failed to save");
+            }
+        } catch (err) {
+            alert("Could not save chat. Try again later.");
+        } finally {
+            setSaving(false);
+        }
+    };
+
     // 1. PERSISTENCE: Load from LocalStorage on mount
     useEffect(() => {
         if (!category) return;
@@ -208,6 +241,16 @@ export default function NewChatPage() {
                     </div>
 
                     <div className="flex items-center gap-2">
+                        {messages.length >= 3 && (
+                            <button
+                                onClick={handleSaveToCloud}
+                                disabled={saving}
+                                className="flex items-center gap-2 px-3 py-2 text-indigo-600 hover:bg-indigo-50 border border-indigo-100 rounded-xl transition-all font-bold text-xs uppercase tracking-widest disabled:opacity-50"
+                            >
+                                {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                                {saving ? "Saving..." : "Save to Cloud"}
+                            </button>
+                        )}
                         <button
                             onClick={handleReset}
                             className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:text-rose-500 hover:bg-rose-50 border border-slate-200 hover:border-rose-500 rounded-xl transition-all active:scale-95"
@@ -273,11 +316,11 @@ export default function NewChatPage() {
                     </div>
                 )}
 
-                <div className="px-6 py-2">
-                    <p className="text-[12px] font-black text-center text-slate-600 uppercase tracking-tighter">
-                        General health information only. Consult a healthcare professional for medical concerns.
+                <footer className="mt-auto pt-6 pb-2 shrink-0 flex justify-center">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                        This Chatbot does not provide Medical Advice. Consult a Medical Professional for the same.
                     </p>
-                </div>
+                </footer>
             </div>
             <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
