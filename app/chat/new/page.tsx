@@ -10,6 +10,7 @@ import {
     Sparkles,
     ShieldCheck,
     ArrowRight,
+    Save,
 } from "lucide-react";
 
 interface Message {
@@ -17,13 +18,12 @@ interface Message {
     role: "user" | "assistant";
     content: string;
     timestamp: Date;
+    options?: string[]; // Only stored in the latest assistant message
 }
 
 const ALLOWED_CATEGORIES = ["Disease", "Symptoms", "Health Habits"];
 
 export default function NewChatPage() {
-
-
     const { data: session, status } = useSession();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -32,33 +32,65 @@ export default function NewChatPage() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
-    const [followUps, setFollowUps] = useState<string[]>([]);
     const [isNamingTopic, setIsNamingTopic] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
 
-    // Initialize Chat based on URL category
+    // 1. PERSISTENCE: Load from LocalStorage on mount
+    useEffect(() => {
+        if (!category) return;
+
+        const savedChat = localStorage.getItem(`asclepius_chat_${category}`);
+        if (savedChat) {
+            try {
+                const parsed = JSON.parse(savedChat);
+                const restoredMessages = parsed.map((m: any) => ({
+                    ...m,
+                    timestamp: new Date(m.timestamp),
+                }));
+
+                setMessages(restoredMessages);
+
+                // If chat has more than 2 messages, user already named the topic
+                if (restoredMessages.length > 2) {
+                    setIsNamingTopic(false);
+                }
+            } catch (e) {
+                console.error("Failed to parse local chat", e);
+            }
+        }
+    }, [category]);
+
+    // 2. PERSISTENCE: Save to LocalStorage whenever messages update
+    useEffect(() => {
+        if (category && messages.length > 0) {
+            localStorage.setItem(`asclepius_chat_${category}`, JSON.stringify(messages));
+        }
+    }, [messages, category]);
+
+    // 3. INITIALIZATION & GUARD: Run if no local storage exists
     useEffect(() => {
         if (status === "unauthenticated") router.push("/");
 
-        // --- CATEGORY VALIDATION LOGIC ---
         if (status === "authenticated" && category) {
             if (!ALLOWED_CATEGORIES.includes(category)) {
-                // Option A: Redirect back to landing page if it's a fake category
                 router.replace("/chat");
                 return;
             }
 
-            if (messages.length === 0) {
+            const hasLocalData = localStorage.getItem(`asclepius_chat_${category}`);
+
+            if (messages.length === 0 && !hasLocalData) {
                 setMessages([
                     { id: "1", role: "user", content: category, timestamp: new Date() },
                     {
                         id: "2",
                         role: "assistant",
                         content: `I'd be happy to help you with ${category.toLowerCase()}. Which specific ${category.toLowerCase()} would you like to talk about today?`,
-                        timestamp: new Date()
+                        timestamp: new Date(),
+                        options: []
                     }
                 ]);
             }
@@ -67,7 +99,16 @@ export default function NewChatPage() {
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages, followUps]);
+    }, [messages]);
+
+    const handleReset = () => {
+        if (category) {
+            localStorage.removeItem(`asclepius_chat_${category}`);
+            setMessages([]);
+            setIsNamingTopic(true);
+            setError(null);
+        }
+    };
 
     const handleSend = async (overrideInput?: string) => {
         const textToSend = overrideInput || input;
@@ -80,12 +121,21 @@ export default function NewChatPage() {
             timestamp: new Date(),
         };
 
-        setMessages((prev) => [...prev, userMessage]);
+        // Strip options from all previous messages to keep storage clean
+        // Strip options from all previous messages to keep storage clean
+        setMessages((prev) =>
+            prev.map((msg): Message => ({
+                ...msg,
+                options: undefined
+            })).concat(userMessage)
+        );
+
         setInput("");
         setLoading(true);
-        setFollowUps([]);
+        setError(null);
 
         try {
+            // VALIDATION LAYER
             if (isNamingTopic && !overrideInput) {
                 const valRes = await fetch("/api/chat", {
                     method: "POST",
@@ -102,7 +152,7 @@ export default function NewChatPage() {
                     setMessages((prev) => [...prev, {
                         id: Date.now().toString(),
                         role: "assistant",
-                        content: `"${textToSend}" does not seem to be a valid ${category?.toLowerCase()}. Please re-enter a valid name.`,
+                        content: `"${textToSend}" is not recognised as a valid ${category?.toLowerCase()}. Please re-enter a valid name.`,
                         timestamp: new Date(),
                     }]);
                     setLoading(false);
@@ -111,6 +161,7 @@ export default function NewChatPage() {
                 setIsNamingTopic(false);
             }
 
+            // CHAT API CALL
             const res = await fetch("/api/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -120,25 +171,27 @@ export default function NewChatPage() {
             });
 
             const data = await res.json();
-            setMessages((prev) => [...prev, {
-                id: Date.now().toString(),
+
+            const botMsg: Message = {
+                id: (Date.now() + 1).toString(),
                 role: "assistant",
                 content: data.response,
                 timestamp: new Date(),
-            }]);
-            setFollowUps(data.followUps || []);
+                options: data.followUps || [],
+            };
+
+            setMessages((prev) => [...prev, botMsg]);
         } catch (err) {
-            console.error(err);
+            setError("Communication failed. Please check your connection.");
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="flex h-screen bg-[#F8FAFC] text-slate-900 overflow-hidden relative">
+        <div className="flex h-screen bg-[#F8FAFC] text-slate-900 overflow-hidden relative font-sans">
             <div className="max-w-5xl mx-auto w-full flex flex-col h-full px-4 py-8 pb-4">
 
-                {/* Header */}
                 {/* Header */}
                 <header className="flex items-center justify-between mb-4 px-4">
                     <div className="flex items-center gap-4">
@@ -154,19 +207,15 @@ export default function NewChatPage() {
                         </div>
                     </div>
 
-                    {/* NEW RESET BUTTON: Stays on page but clears state */}
-                    <button
-                        onClick={() => {
-                            setMessages([]);
-                            setFollowUps([]);
-                            setIsNamingTopic(true);
-                            setError(null);
-                        }}
-                        className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:text-rose-500 hover:bg-rose-50 border border-slate-200 hover:border-rose-500 rounded-xl transition-all active:scale-95"
-                    >
-                        <RotateCcw size={18} />
-                        <span className="text-xs font-black uppercase tracking-widest">Reset Chat</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleReset}
+                            className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:text-rose-500 hover:bg-rose-50 border border-slate-200 hover:border-rose-500 rounded-xl transition-all active:scale-95"
+                        >
+                            <RotateCcw size={18} />
+                            <span className="text-xs font-black uppercase tracking-widest">Reset Chat</span>
+                        </button>
+                    </div>
                 </header>
 
                 {/* Chat Area */}
@@ -181,35 +230,42 @@ export default function NewChatPage() {
                             </div>
                         ))}
 
-                        {followUps.length > 0 && !loading && (
-                            <div className="flex flex-wrap gap-2 ml-12 animate-in fade-in slide-in-from-bottom-2 duration-700">
-                                {followUps.map((q, i) => (
-                                    <button key={i} onClick={() => handleSend(q)} className="text-xs font-bold text-indigo-600 bg-white border border-indigo-100 px-4 py-2.5 rounded-2xl hover:bg-indigo-50 transition-all shadow-sm active:scale-95">{q}</button>
-                                ))}
-                            </div>
-                        )}
+                        {/* Follow-ups from only the latest assistant message */}
+                        {messages.length > 0 &&
+                            messages[messages.length - 1].role === "assistant" &&
+                            messages[messages.length - 1].options &&
+                            !loading && (
+                                <div className="flex flex-wrap gap-2 ml-12 animate-in fade-in slide-in-from-bottom-2 duration-700">
+                                    {messages[messages.length - 1].options!.map((q, i) => (
+                                        <button key={i} onClick={() => handleSend(q)} className="text-xs font-bold text-indigo-600 bg-white border border-indigo-100 px-4 py-2.5 rounded-2xl hover:bg-indigo-50 transition-all shadow-sm active:scale-95">{q}</button>
+                                    ))}
+                                </div>
+                            )}
                     </div>
                     {loading && (
-                        <div className="flex gap-4 justify-start animate-pulse">
-                            <Bot size={18} className="text-indigo-400 ml-4" />
-                            <div className="bg-slate-200 h-10 w-24 rounded-2xl" />
+                        <div className="flex gap-4 justify-start">
+                            <div className="h-9 w-9 rounded-xl bg-white border border-indigo-50 flex items-center justify-center shrink-0"><Bot size={18} className="text-indigo-400" /></div>
+                            <div className="bg-white border border-slate-100 rounded-[24px] rounded-tl-md px-6 py-4 shadow-sm"><div className="flex gap-1.5"><div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.3s]" /><div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.15s]" /><div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" /></div></div>
                         </div>
                     )}
                     <div ref={messagesEndRef} />
                 </div>
 
-                {/* Input Bar */}
+                {/* Centered Input Bar */}
                 {isNamingTopic && (
                     <div className="bg-white border border-slate-100 rounded-[32px] p-2 shadow-2xl mb-4 mx-4 flex gap-3 items-center animate-in fade-in slide-in-from-bottom-2">
                         <textarea
-                            ref={inputRef}
-                            autoFocus
-                            value={input}
+                            ref={inputRef} autoFocus value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSend())}
-                            placeholder={`Enter ${category} name...`}
+                            placeholder={`Enter ${category?.toLowerCase()} name...`}
                             className="flex-1 resize-none rounded-2xl bg-transparent px-4 py-3 text-sm font-semibold outline-none leading-relaxed"
                             style={{ height: '48px', maxHeight: "150px" }}
+                            onInput={(e) => {
+                                const target = e.target as HTMLTextAreaElement;
+                                target.style.height = "auto";
+                                target.style.height = `${target.scrollHeight}px`;
+                            }}
                         />
                         <button onClick={() => handleSend()} disabled={!input.trim() || loading} className="h-12 w-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shrink-0 active:scale-90 transition-all">
                             {loading ? <Loader2 size={20} className="animate-spin" /> : <ArrowRight size={20} />}
@@ -219,10 +275,15 @@ export default function NewChatPage() {
 
                 <div className="px-6 py-2">
                     <p className="text-[12px] font-black text-center text-slate-600 uppercase tracking-tighter">
-                        This chatbot does not provide medical advice. Consult a professional.
+                        General health information only. Consult a healthcare professional for medical concerns.
                     </p>
                 </div>
             </div>
+            <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 20px; }
+      `}</style>
         </div>
     );
 }
