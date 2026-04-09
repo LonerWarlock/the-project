@@ -18,7 +18,7 @@ interface Message {
     role: "user" | "assistant";
     content: string;
     timestamp: Date;
-    options?: string[]; // Only stored in the latest assistant message
+    options?: string[];
 }
 
 const ALLOWED_CATEGORIES = ["Disease", "Symptoms", "Health Habits"];
@@ -33,20 +33,19 @@ export default function NewChatPage() {
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
     const [isNamingTopic, setIsNamingTopic] = useState(true);
+    const [isConfirming, setIsConfirming] = useState(false); // Keyboard lock state
     const [error, setError] = useState<string | null>(null);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
 
     const [saving, setSaving] = useState(false);
+    const [topicName, setTopicName] = useState<string | null>(null);
 
     const handleSaveToCloud = async () => {
-        if (messages.length < 3 || saving) return;
+        if (messages.length < 3 || saving || !topicName) return;
         setSaving(true);
-
         try {
-            const topicName = messages[2]?.content;
-
             const res = await fetch("/api/chat/save", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -56,10 +55,9 @@ export default function NewChatPage() {
                     messages: messages
                 }),
             });
-
             if (res.ok) {
-                // 1. DELETE FROM LOCAL STORAGE
                 localStorage.removeItem(`asclepius_chat_${category}`);
+                localStorage.removeItem(`asclepius_topic_${category}`);
                 router.push("/chat/history");
             } else {
                 throw new Error("Failed to save");
@@ -71,11 +69,10 @@ export default function NewChatPage() {
         }
     };
 
-    // 1. PERSISTENCE: Load from LocalStorage on mount
     useEffect(() => {
         if (!category) return;
-
         const savedChat = localStorage.getItem(`asclepius_chat_${category}`);
+        const savedTopic = localStorage.getItem(`asclepius_topic_${category}`);
         if (savedChat) {
             try {
                 const parsed = JSON.parse(savedChat);
@@ -83,38 +80,36 @@ export default function NewChatPage() {
                     ...m,
                     timestamp: new Date(m.timestamp),
                 }));
-
                 setMessages(restoredMessages);
-
-                // If chat has more than 2 messages, user already named the topic
-                if (restoredMessages.length > 2) {
+                if (savedTopic) {
+                    setTopicName(savedTopic);
+                    setIsNamingTopic(false);
+                } else if (restoredMessages.length > 2) {
                     setIsNamingTopic(false);
                 }
             } catch (e) {
-                console.error("Failed to parse local chat", e);
+                console.error("Failed to restore session", e);
             }
         }
     }, [category]);
 
-    // 2. PERSISTENCE: Save to LocalStorage whenever messages update
     useEffect(() => {
         if (category && messages.length > 0) {
             localStorage.setItem(`asclepius_chat_${category}`, JSON.stringify(messages));
+            if (topicName) {
+                localStorage.setItem(`asclepius_topic_${category}`, topicName);
+            }
         }
-    }, [messages, category]);
+    }, [messages, category, topicName]);
 
-    // 3. INITIALIZATION & GUARD: Run if no local storage exists
     useEffect(() => {
         if (status === "unauthenticated") router.push("/");
-
         if (status === "authenticated" && category) {
             if (!ALLOWED_CATEGORIES.includes(category)) {
                 router.replace("/chat");
                 return;
             }
-
             const hasLocalData = localStorage.getItem(`asclepius_chat_${category}`);
-
             if (messages.length === 0 && !hasLocalData) {
                 setMessages([
                     { id: "1", role: "user", content: category, timestamp: new Date() },
@@ -137,14 +132,36 @@ export default function NewChatPage() {
     const handleReset = () => {
         if (category) {
             localStorage.removeItem(`asclepius_chat_${category}`);
+            localStorage.removeItem(`asclepius_topic_${category}`);
             setMessages([]);
+            setTopicName(null);
             setIsNamingTopic(true);
+            setIsConfirming(false);
             setError(null);
         }
     };
 
     const handleSend = async (overrideInput?: string) => {
-        const textToSend = overrideInput || input;
+        let textToSend = overrideInput || input;
+
+        // Handle Disambiguation Options
+        if (overrideInput === "No, let me re-type") {
+            setIsConfirming(false);
+            setInput("");
+            return;
+        }
+
+        if (overrideInput === "Yes") {
+            const lastMsg = messages[messages.length - 1].content;
+            const confirmedName = lastMsg.replace("Did you mean ", "").replace("?", "");
+            const formatted = confirmedName.charAt(0).toUpperCase() + confirmedName.slice(1).toLowerCase();
+
+            setTopicName(formatted);
+            setIsNamingTopic(false);
+            setIsConfirming(false);
+            textToSend = confirmedName;
+        }
+
         if (!textToSend.trim() || loading) return;
 
         const userMessage: Message = {
@@ -154,22 +171,21 @@ export default function NewChatPage() {
             timestamp: new Date(),
         };
 
-        // Strip options from all previous messages to keep storage clean
-        // Strip options from all previous messages to keep storage clean
-        setMessages((prev) =>
-            prev.map((msg): Message => ({
+        setMessages((prev) => {
+            const cleanedHistory = prev.map((msg): Message => ({
                 ...msg,
                 options: undefined
-            })).concat(userMessage)
-        );
+            }));
 
+            return [...cleanedHistory, userMessage];
+        });
         setInput("");
         setLoading(true);
         setError(null);
 
         try {
-            // VALIDATION LAYER
-            if (isNamingTopic && !overrideInput) {
+            // VALIDATION LAYER (Only if not already confirmed)
+            if (isNamingTopic && overrideInput !== "Yes") {
                 const valRes = await fetch("/api/chat", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -181,16 +197,34 @@ export default function NewChatPage() {
                 });
                 const valData = await valRes.json();
 
-                if (!valData.isValid) {
+                if (valData.status === "INVALID") {
                     setMessages((prev) => [...prev, {
                         id: Date.now().toString(),
                         role: "assistant",
-                        content: `"${textToSend}" is not recognised as a valid ${category?.toLowerCase()}. Please re-enter a valid name.`,
+                        content: `"${textToSend}" is not recognised. Please enter a valid ${category?.toLowerCase()} name.`,
                         timestamp: new Date(),
                     }]);
                     setLoading(false);
                     return;
                 }
+
+                if (valData.status === "SUGGEST") {
+                    setIsConfirming(true); // DISAPPEAR INPUT BOX
+                    setMessages((prev) => [...prev, {
+                        id: Date.now().toString(),
+                        role: "assistant",
+                        content: `Did you mean ${valData.validatedName}?`,
+                        timestamp: new Date(),
+                        options: ["Yes", "No, let me re-type"]
+                    }]);
+                    setLoading(false);
+                    return;
+                }
+
+                // Perfectly Valid
+                const cleanName = valData.validatedName || textToSend;
+                const formatted = cleanName.charAt(0).toUpperCase() + cleanName.slice(1).toLowerCase();
+                setTopicName(formatted);
                 setIsNamingTopic(false);
             }
 
@@ -199,21 +233,19 @@ export default function NewChatPage() {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    messages: messages.map((m) => ({ role: m.role, content: m.content })).concat({ role: "user", content: userMessage.content }),
+                    messages: messages.map((m) => ({ role: m.role, content: m.content })).concat({ role: "user", content: textToSend }),
+                    topicContext: topicName || textToSend // Pass context to AI
                 }),
             });
 
             const data = await res.json();
-
-            const botMsg: Message = {
+            setMessages((prev) => [...prev, {
                 id: (Date.now() + 1).toString(),
                 role: "assistant",
                 content: data.response,
                 timestamp: new Date(),
                 options: data.followUps || [],
-            };
-
-            setMessages((prev) => [...prev, botMsg]);
+            }]);
         } catch (err) {
             setError("Communication failed. Please check your connection.");
         } finally {
@@ -225,35 +257,38 @@ export default function NewChatPage() {
         <div className="flex h-screen bg-[#F8FAFC] text-slate-900 overflow-hidden relative font-sans">
             <div className="max-w-5xl mx-auto w-full flex flex-col h-full px-4 py-8 pb-4">
 
-                {/* Header */}
                 <header className="flex items-center justify-between mb-4 px-4">
                     <div className="flex items-center gap-4">
                         <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-500 flex items-center justify-center shadow-xl shadow-indigo-200">
                             <Sparkles size={24} className="text-white" />
                         </div>
                         <div>
-                            <h1 className="text-xl font-black text-slate-800 tracking-tight">Asclepius <span className="text-indigo-600">AI</span></h1>
+                            <h1 className="text-xl font-black text-slate-800 tracking-tight">
+                                {topicName || "New Chat"}
+                            </h1>
                             <div className="flex items-center gap-1.5">
                                 <ShieldCheck size={12} className="text-emerald-500" />
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{category} Enquiry</p>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                    {category} Intelligence
+                                </p>
                             </div>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-2">
-                        {messages.length >= 3 && (
+                        {topicName && (
                             <button
                                 onClick={handleSaveToCloud}
                                 disabled={saving}
-                                className="flex items-center gap-2 px-3 py-2 text-indigo-600 hover:bg-indigo-50 border border-indigo-100 rounded-xl transition-all font-bold text-xs uppercase tracking-widest disabled:opacity-50"
+                                className="flex items-center gap-2 px-3 py-2 text-indigo-700 hover:text-white hover:bg-indigo-700 border-2 border-indigo-700 rounded-xl transition-all active:scale-95"
                             >
                                 {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                                {saving ? "Saving..." : "Save to Cloud"}
+                                <span className="text-xs font-black uppercase tracking-widest">{saving ? "Saving..." : "Save Chat"}</span>
                             </button>
                         )}
                         <button
                             onClick={handleReset}
-                            className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:text-rose-500 hover:bg-rose-50 border border-slate-200 hover:border-rose-500 rounded-xl transition-all active:scale-95"
+                            className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:text-rose-500 hover:bg-rose-50 border-2 border-slate-400 hover:border-rose-500 rounded-xl transition-all active:scale-95"
                         >
                             <RotateCcw size={18} />
                             <span className="text-xs font-black uppercase tracking-widest">Reset Chat</span>
@@ -261,7 +296,6 @@ export default function NewChatPage() {
                     </div>
                 </header>
 
-                {/* Chat Area */}
                 <div className="flex-1 overflow-y-auto mb-4 space-y-6 px-4 custom-scrollbar">
                     <div className="space-y-6 pb-4">
                         {messages.map((message) => (
@@ -273,7 +307,6 @@ export default function NewChatPage() {
                             </div>
                         ))}
 
-                        {/* Follow-ups from only the latest assistant message */}
                         {messages.length > 0 &&
                             messages[messages.length - 1].role === "assistant" &&
                             messages[messages.length - 1].options &&
@@ -288,14 +321,16 @@ export default function NewChatPage() {
                     {loading && (
                         <div className="flex gap-4 justify-start">
                             <div className="h-9 w-9 rounded-xl bg-white border border-indigo-50 flex items-center justify-center shrink-0"><Bot size={18} className="text-indigo-400" /></div>
-                            <div className="bg-white border border-slate-100 rounded-[24px] rounded-tl-md px-6 py-4 shadow-sm"><div className="flex gap-1.5"><div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.3s]" /><div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.15s]" /><div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" /></div></div>
+                            <div className="bg-white border border-slate-100 rounded-[24px] rounded-tl-md px-6 py-4 shadow-sm">
+                                <div className="flex gap-1.5"><div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.3s]" /><div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.15s]" /><div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" /></div>
+                            </div>
                         </div>
                     )}
                     <div ref={messagesEndRef} />
                 </div>
 
-                {/* Centered Input Bar */}
-                {isNamingTopic && (
+                {/* Input Bar (Disappears when confirming) */}
+                {isNamingTopic && !isConfirming && (
                     <div className="bg-white border border-slate-100 rounded-[32px] p-2 shadow-2xl mb-4 mx-4 flex gap-3 items-center animate-in fade-in slide-in-from-bottom-2">
                         <textarea
                             ref={inputRef} autoFocus value={input}
@@ -304,11 +339,6 @@ export default function NewChatPage() {
                             placeholder={`Enter ${category?.toLowerCase()} name...`}
                             className="flex-1 resize-none rounded-2xl bg-transparent px-4 py-3 text-sm font-semibold outline-none leading-relaxed"
                             style={{ height: '48px', maxHeight: "150px" }}
-                            onInput={(e) => {
-                                const target = e.target as HTMLTextAreaElement;
-                                target.style.height = "auto";
-                                target.style.height = `${target.scrollHeight}px`;
-                            }}
                         />
                         <button onClick={() => handleSend()} disabled={!input.trim() || loading} className="h-12 w-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shrink-0 active:scale-90 transition-all">
                             {loading ? <Loader2 size={20} className="animate-spin" /> : <ArrowRight size={20} />}
@@ -323,10 +353,10 @@ export default function NewChatPage() {
                 </footer>
             </div>
             <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 20px; }
-      `}</style>
+                .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 20px; }
+            `}</style>
         </div>
     );
 }
