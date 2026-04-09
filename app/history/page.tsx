@@ -119,7 +119,7 @@ export default function HistoryPage() {
                     >
                       {new Date(record.createdAt).toLocaleDateString("en-GB", {
                         month: "short",
-                        year: "2-digit",
+                        year: "numeric",
                       })}
                     </span>
                     <span

@@ -38,7 +38,7 @@ export default function ChatLandingPage() {
             Hello, {session?.user?.name?.split(' ')[0]}
           </h2>
           <p className="text-slate-500 text-lg  font-bold">
-            Select a category to begin your chat.
+            What do you want to talk about today?
           </p>
         </div>
 
@@ -54,7 +54,7 @@ export default function ChatLandingPage() {
               desc: "Chronic care & conditions."
             },
             {
-              label: "Symptoms",
+              label: "Symptom",
               icon: <Heart size={24} />,
               color: "text-rose-600",
               bg: "bg-rose-50",
@@ -62,7 +62,7 @@ export default function ChatLandingPage() {
               desc: "Acute signs & guidance."
             },
             {
-              label: "Health Habits",
+              label: "Health Habit",
               icon: <Activity size={24} />,
               color: "text-sky-600",
               bg: "bg-sky-50",
