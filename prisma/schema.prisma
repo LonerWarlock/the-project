@@ -65,6 +65,7 @@ model ChatMessage {
   role      String   // user or assistant
   content   String   @db.Text
   options   String[] // Stores follow-up questions for assistant messages
+  order     Int
   createdAt DateTime @default(now())
   chatId    String
 

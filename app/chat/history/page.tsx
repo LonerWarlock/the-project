@@ -179,11 +179,11 @@ export default function HistoryPage() {
                                         <h3 className="text-lg font-black text-slate-800 truncate tracking-tight">
                                             {chat.topicName}
                                         </h3>
-                                        <div className="flex items-center gap-2 mt-1 text-[10px] font-bold text-slate-500 tracking-widest uppercase">
+                                        <div className="flex items-center gap-2 mt-1 text-[10px] font-bold text-slate-400 tracking-widest">
                                             {chat.updatedAt !== chat.createdAt && (
                                                 <>
                                                     Created: 
-                                                    <span className="text-slate-400">
+                                                    <span className="uppercase">
                                                         {new Date(chat.createdAt).toLocaleString("en-GB", {
                                                             day: "2-digit",
                                                             month: "2-digit",

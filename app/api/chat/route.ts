@@ -55,7 +55,7 @@ Respond ONLY with JSON: {"status": "VALID" | "SUGGEST" | "INVALID", "validatedNa
     Follow these rules strictly:
     1. Answer in exactly 2 to 3 sentences total.
     2. Use language that a non-medical person can understand.
-    3. Provide exactly 3 short follow-up questions that user can ask you.
+    3. Provide exactly 3 short follow-up questions that user can ask you, they must not be directed at the user.
     4. YOU MUST RESPOND IN JSON: {"reply": "...", "followUps": ["q1", "q2", "q3"]}`;
 
     const completion = await groq.chat.completions.create({

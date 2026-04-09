@@ -3,21 +3,21 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import {
-  Loader2,
-  ArrowLeft,
+import { 
+  Loader2, 
+  ArrowLeft, 
   Bot,
-  Calendar,
-  ShieldCheck,
+  ShieldCheck, 
   Sparkles,
-  MessageSquare
+  MessageSquare,
+  MessageCircle // Added for Resume Chat icon
 } from "lucide-react";
 
 export default function ChatDetailView() {
   const { id } = useParams();
   const { status } = useSession();
   const router = useRouter();
-
+  
   const [chat, setChat] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -32,7 +32,7 @@ export default function ChatDetailView() {
         const res = await fetch("/api/chat/history");
         const data = await res.json();
         const found = data.find((c: any) => c.id === id);
-
+        
         if (found) {
           setChat(found);
         }
@@ -48,6 +48,19 @@ export default function ChatDetailView() {
     }
   }, [status, id, router]);
 
+  // FEATURE: Resume Chat Logic
+  const handleResumeChat = () => {
+    if (!chat) return;
+
+    // 1. Save the existing messages and topic to LocalStorage
+    // This allows the /chat/new page to pick up exactly where this saved chat left off
+    localStorage.setItem(`asclepius_chat_${chat.category}`, JSON.stringify(chat.messages));
+    localStorage.setItem(`asclepius_topic_${chat.category}`, chat.topicName);
+    localStorage.setItem(`asclepius_active_id_${chat.category}`, chat.id);
+    // 2. Redirect to the new chat page with the correct category
+    router.push(`/chat/new?category=${chat.category}`);
+  };
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#F8FAFC]">
@@ -60,11 +73,11 @@ export default function ChatDetailView() {
     return (
       <div className="flex flex-col h-screen items-center justify-center gap-4 bg-[#F8FAFC]">
         <div className="h-16 w-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 mb-2">
-          <MessageSquare size={32} />
+           <MessageSquare size={32} />
         </div>
         <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-xs">Record Not Found</p>
-        <button
-          onClick={() => router.push("/chat/history")}
+        <button 
+          onClick={() => router.push("/chat/history")} 
           className="bg-indigo-600 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition-all active:scale-95"
         >
           Return to History
@@ -76,8 +89,8 @@ export default function ChatDetailView() {
   return (
     <div className="flex h-screen bg-[#F8FAFC] text-slate-900 overflow-hidden relative font-sans">
       <div className="max-w-5xl mx-auto w-full flex flex-col h-full px-4 py-8 pb-4">
-
-        {/* Header - Styled like NewChatPage */}
+        
+        {/* Header */}
         <header className="flex items-center justify-between mb-8 px-4 shrink-0">
           <div className="flex items-center gap-4">
             <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-500 flex items-center justify-center shadow-xl shadow-indigo-200">
@@ -98,26 +111,24 @@ export default function ChatDetailView() {
 
           <div className="flex items-center gap-3">
             <div className="hidden md:flex flex-col items-end mr-2">
-              <div className="flex items-center gap-1.5 text-slate-600">
-                <Calendar size={12} />
+              <div className="flex items-center gap-1.5 text-slate-400">
+                 
                 <span className="text-[10px] font-black uppercase tracking-widest tabular-nums">
-                  {(() => {
-                    const dateToDisplay = new Date(chat.updatedAt || chat.createdAt);
-                    return dateToDisplay.toLocaleString("en-GB", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      hour12: true,
-                    }).replace(",", " •"); // Adds a subtle separator between date and time
-                  })()}
+                    <>Last Updated:  </>
+                    {new Date(chat.updatedAt || chat.createdAt).toLocaleString("en-GB", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: true,
+                    }).replace(",", " •")}
                 </span>
               </div>
             </div>
             <button
               onClick={() => router.push("/chat/history")}
-              className="flex items-center gap-2 px-4 py-2.5 text-slate-700 hover:text-indigo-600 hover:bg-indigo-50 border-2 border-slate-200 hover:border-indigo-600 rounded-xl transition-all active:scale-95 shadow-sm"
+              className="flex items-center gap-2 px-4 py-2.5 text-slate-700 hover:text-indigo-600 hover:bg-white border-2 border-slate-200 hover:border-indigo-100 rounded-xl transition-all active:scale-95 shadow-sm"
             >
               <ArrowLeft size={16} />
               <span className="text-xs font-black uppercase tracking-widest">Back</span>
@@ -125,12 +136,12 @@ export default function ChatDetailView() {
           </div>
         </header>
 
-        {/* Chat Thread - Styled exactly like NewChatPage */}
+        {/* Chat Thread */}
         <div className="flex-1 overflow-y-auto mb-4 space-y-6 px-4 custom-scrollbar">
           <div className="space-y-6 pb-10">
             {chat.messages.map((message: any) => (
-              <div
-                key={message.id}
+              <div 
+                key={message.id} 
                 className={`flex gap-4 ${message.role === "user" ? "justify-end" : "justify-start"} animate-in slide-in-from-bottom-4 duration-500`}
               >
                 {message.role === "assistant" && (
@@ -138,34 +149,32 @@ export default function ChatDetailView() {
                     <Bot size={18} className="text-indigo-600" />
                   </div>
                 )}
-                <div
-                  className={`max-w-[80%] rounded-[24px] px-5 py-4 shadow-sm ${message.role === "user"
-                      ? "bg-indigo-600 text-white rounded-br-md shadow-indigo-100"
+                <div 
+                  className={`max-w-[80%] rounded-[24px] px-5 py-4 shadow-sm ${
+                    message.role === "user" 
+                      ? "bg-indigo-600 text-white rounded-br-md shadow-indigo-100" 
                       : "bg-white border border-slate-100 text-slate-800 rounded-bl-md"
-                    }`}
+                  }`}
                 >
                   <p className="text-sm font-medium leading-relaxed">{message.content}</p>
-                  <div className={`text-[10px] font-bold uppercase mt-2 opacity-50 ${message.role === "user" ? "text-right" : "text-left"}`}>
-                    {(() => {
-                    const dateToDisplay = new Date(message.createdAt);
-                    return dateToDisplay.toLocaleString("en-GB", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      hour12: true,
-                    }).replace(",", " •"); // Adds a subtle separator between date and time
-                  })()}
-                  </div>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Footer */}
-        <footer className="mt-auto pt-6 pb-2 shrink-0 flex justify-center">
+        {/* RESUME CHAT BUTTON SECTION */}
+        <div className="pb-2 shrink-0 flex flex-col items-center gap-4">
+            <button
+                onClick={handleResumeChat}
+                className="group flex items-center gap-3 px-4 py-3 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-indigo-700 transition-all active:scale-95 shadow-xl shadow-indigo-100"
+            >
+                <MessageCircle size={20} className="group-hover:rotate-12 transition-transform" />
+                Resume Chat
+            </button>
+        </div>
+
+        <footer className="mt-auto pt-6 pb-2 shrink-0 border-t border-slate-100 flex justify-center">
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
             This Chatbot does not provide Medical Advice. Consult a Medical Professional for the same.
           </p>

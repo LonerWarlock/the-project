@@ -14,14 +14,17 @@ export async function GET() {
       where: { userId: session.user.id },
       include: {
         messages: {
-          orderBy: { createdAt: 'asc' }
+          orderBy: { 
+            order: 'asc' // <--- SORT BY ORDER INSTEAD OF TIMESTAMP
+          }
         }
       },
-      orderBy: { updatedAt: 'desc' }
+      orderBy: { updatedAt: 'desc' } // Most recently active chats first
     });
 
     return NextResponse.json(chats);
   } catch (error) {
+    console.error("Fetch History Error:", error);
     return NextResponse.json({ error: "Failed to fetch history" }, { status: 500 });
   }
 }

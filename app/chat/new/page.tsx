@@ -10,6 +10,7 @@ import {
     Sparkles,
     ShieldCheck,
     ArrowRight,
+    X,
     Save,
 } from "lucide-react";
 
@@ -35,6 +36,7 @@ export default function NewChatPage() {
     const [isNamingTopic, setIsNamingTopic] = useState(true);
     const [isConfirming, setIsConfirming] = useState(false); // Keyboard lock state
     const [error, setError] = useState<string | null>(null);
+    const [existingChatId, setExistingChatId] = useState<string | null>(null);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -72,6 +74,7 @@ export default function NewChatPage() {
     useEffect(() => {
         if (!category) return;
         const savedChat = localStorage.getItem(`asclepius_chat_${category}`);
+        const savedId = localStorage.getItem(`asclepius_active_id_${category}`);
         const savedTopic = localStorage.getItem(`asclepius_topic_${category}`);
         if (savedChat) {
             try {
@@ -86,6 +89,9 @@ export default function NewChatPage() {
                     setIsNamingTopic(false);
                 } else if (restoredMessages.length > 2) {
                     setIsNamingTopic(false);
+                }
+                if (savedId) {
+                    setExistingChatId(savedId);
                 }
             } catch (e) {
                 console.error("Failed to restore session", e);
@@ -138,6 +144,21 @@ export default function NewChatPage() {
             setIsNamingTopic(true);
             setIsConfirming(false);
             setError(null);
+        }
+    };
+
+    const handleClose = () => {
+        if (category) {
+            const Id = localStorage.getItem(`asclepius_active_id_${category}`);
+            const hasId = Id ? true : false;
+            localStorage.removeItem(`asclepius_chat_${category}`);
+            localStorage.removeItem(`asclepius_topic_${category}`);
+            localStorage.removeItem(`asclepius_active_id_${category}`);
+            if(hasId){
+                router.push("/chat/history")
+            }else{
+                router.push("/chat");
+            } 
         }
     };
 
@@ -290,16 +311,29 @@ export default function NewChatPage() {
                                 className="flex items-center gap-2 px-3 py-2 text-indigo-700 hover:text-white hover:bg-indigo-700 border-2 border-indigo-700 rounded-xl transition-all active:scale-95"
                             >
                                 {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                                <span className="text-xs font-black uppercase tracking-widest">{saving ? "Saving..." : "Save Chat"}</span>
+                                <span className="text-xs font-black uppercase tracking-widest">{saving ? "Saving..." : "Save"}</span>
                             </button>
                         )}
+                        {!existingChatId && (
+                            
+                                <button
+                                    onClick={handleReset}
+                                    className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:text-white hover:bg-slate-600 border-2 border-slate-400 hover:border-slate-600 rounded-xl transition-all active:scale-95"
+                                >
+                                    <RotateCcw size={18} />
+                                    <span className="text-xs font-black uppercase tracking-widest">Reset</span>
+                                </button>
+
+                                
+                            
+                        )}
                         <button
-                            onClick={handleReset}
-                            className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:text-rose-500 hover:bg-rose-50 border-2 border-slate-400 hover:border-rose-500 rounded-xl transition-all active:scale-95"
-                        >
-                            <RotateCcw size={18} />
-                            <span className="text-xs font-black uppercase tracking-widest">Reset Chat</span>
-                        </button>
+                                    onClick={handleClose}
+                                    className="flex items-center gap-2 px-3 py-2 text-rose-500 hover:text-white hover:bg-rose-600 border-2 border-rose-300 hover:border-rose-600 rounded-xl transition-all active:scale-95"
+                                >
+                                    <X size={18} />
+                                    <span className="text-xs font-black uppercase tracking-widest">Close</span>
+                                </button>
                     </div>
                 </header>
 

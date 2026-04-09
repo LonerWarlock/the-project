@@ -12,37 +12,40 @@ export async function POST(request: Request) {
 
     const { category, topicName, messages } = await request.json();
 
-    // Find or Create the Chat head
+    // Find if a chat with this topic already exists for the user
+    const existingChat = await prisma.chat.findFirst({
+      where: { userId: session.user.id, topicName, category }
+    });
+
+    const chatData = {
+      userId: session.user.id,
+      category,
+      topicName,
+      messages: {
+        create: messages.map((m: any, index: number) => ({
+          role: m.role,
+          content: m.content,
+          options: m.options || [],
+          order: index // <--- TRACK THE SEQUENCE
+        }))
+      }
+    };
+
+    // app/api/chat/save/route.ts
+
     const chat = await prisma.chat.upsert({
-      where: {
-        // We use a combination check to see if this user has a chat for this specific topic
-        id: (await prisma.chat.findFirst({
-          where: { userId: session.user.id, topicName, category }
-        }))?.id || 'new-id' 
-      },
+      where: { id: existingChat?.id || 'new-id' },
       update: {
-        // Clear old messages and replace with current session
+        // FORCE UPDATE: Explicitly setting updatedAt triggers the refresh
+        updatedAt: new Date(),
+
+        // Clear old messages and replace with current ordered session
         messages: {
           deleteMany: {},
-          create: messages.map((m: any) => ({
-            role: m.role,
-            content: m.content,
-            options: m.options || []
-          }))
+          create: chatData.messages.create
         }
       },
-      create: {
-        userId: session.user.id,
-        category,
-        topicName,
-        messages: {
-          create: messages.map((m: any) => ({
-            role: m.role,
-            content: m.content,
-            options: m.options || []
-          }))
-        }
-      }
+      create: chatData
     });
 
     return NextResponse.json({ success: true, chatId: chat.id });
