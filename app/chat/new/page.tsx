@@ -13,6 +13,7 @@ import {
     X,
     Save,
 } from "lucide-react";
+import AlertDialog from "@/components/AlertDialog";
 
 interface Message {
     id: string;
@@ -43,6 +44,15 @@ export default function NewChatPage() {
 
     const [saving, setSaving] = useState(false);
     const [topicName, setTopicName] = useState<string | null>(null);
+    const [showExitAlert, setShowExitAlert] = useState(false);
+
+    const [alertConfig, setAlertConfig] = useState<{
+        title: string;
+        message: string;
+        yesText: string;
+        noText: string;
+        action: () => void;
+    } | null>(null);
 
     const handleSaveToCloud = async () => {
         if (messages.length < 3 || saving || !topicName) return;
@@ -154,11 +164,11 @@ export default function NewChatPage() {
             localStorage.removeItem(`asclepius_chat_${category}`);
             localStorage.removeItem(`asclepius_topic_${category}`);
             localStorage.removeItem(`asclepius_active_id_${category}`);
-            if(hasId){
+            if (hasId) {
                 router.push("/chat/history")
-            }else{
+            } else {
                 router.push("/chat");
-            } 
+            }
         }
     };
 
@@ -315,25 +325,64 @@ export default function NewChatPage() {
                             </button>
                         )}
                         {!existingChatId && (
-                            
-                                <button
-                                    onClick={handleReset}
-                                    className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:text-white hover:bg-slate-600 border-2 border-slate-400 hover:border-slate-600 rounded-xl transition-all active:scale-95"
-                                >
-                                    <RotateCcw size={18} />
-                                    <span className="text-xs font-black uppercase tracking-widest">Reset</span>
-                                </button>
 
-                                
-                            
+                            <button
+                                onClick={() => {
+                                    if (topicName) {
+                                        setAlertConfig({
+                                            title: "Reset Chat?",
+                                            message: "Are you sure you want to reset this chat? Your current progress will be lost.",
+                                            action: handleReset,
+                                            yesText: "Yes, Reset",
+                                            noText: "No, Stay"
+                                        });
+                                    } else {
+                                        handleReset();
+                                    }
+                                }}
+                                className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:text-white hover:bg-slate-600 border-2 border-slate-400 hover:border-slate-600 rounded-xl transition-all active:scale-95"
+                            >
+                                <RotateCcw size={18} />
+                                <span className="text-xs font-black uppercase tracking-widest">Reset</span>
+                            </button>
+
+
+
+
                         )}
+
                         <button
-                                    onClick={handleClose}
-                                    className="flex items-center gap-2 px-3 py-2 text-rose-500 hover:text-white hover:bg-rose-600 border-2 border-rose-300 hover:border-rose-600 rounded-xl transition-all active:scale-95"
-                                >
-                                    <X size={18} />
-                                    <span className="text-xs font-black uppercase tracking-widest">Close</span>
-                                </button>
+                            onClick={() => {
+                                if (topicName) {
+                                    setAlertConfig({
+                                        title: "Close Chat?",
+                                        message: "Are you sure you want to close this chat? Your current progress will be lost if it is not saved.",
+                                        action: handleClose,
+                                        yesText: "Yes, Close",
+                                        noText: "No, Stay"
+                                    });
+                                } else {
+                                    handleClose();
+                                }
+                            }}
+                            className="flex items-center gap-2 px-3 py-2 text-rose-500 hover:text-white hover:bg-rose-600 border-2 border-rose-300 hover:border-rose-600 rounded-xl transition-all active:scale-95"
+                        >
+                            <X size={18} />
+                            <span className="text-xs font-black uppercase tracking-widest">Close</span>
+                        </button>
+                        <AlertDialog
+                            isOpen={!!alertConfig}
+                            onClose={() => setAlertConfig(null)}
+                            title={alertConfig?.title || ""}
+                            message={alertConfig?.message || ""}
+                            yesText={alertConfig?.yesText || ""}
+                            noText={alertConfig?.noText || ""}
+                            onYes={() => {
+                                alertConfig?.action();
+                                setAlertConfig(null);
+                            }}
+                        />
+
                     </div>
                 </header>
 
