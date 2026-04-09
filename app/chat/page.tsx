@@ -51,7 +51,7 @@ export default function ChatLandingPage() {
               color: "text-purple-600",
               bg: "bg-purple-50",
               border: "border-purple-300 hover:border-purple-600",
-              desc: "Chronic care & conditions."
+              desc: "Chronic care & conditions"
             },
             {
               label: "Symptom",
@@ -59,7 +59,7 @@ export default function ChatLandingPage() {
               color: "text-rose-600",
               bg: "bg-rose-50",
               border: "border-rose-300 hover:border-rose-600",
-              desc: "Acute signs & guidance."
+              desc: "Acute signs & guidance"
             },
             {
               label: "Health Habit",
@@ -67,7 +67,7 @@ export default function ChatLandingPage() {
               color: "text-sky-600",
               bg: "bg-sky-50",
               border: "border-sky-300 hover:border-sky-600",
-              desc: "Wellness & routines."
+              desc: "Wellness & routines"
             },
           ].map((cat) => (
             <button

@@ -21,7 +21,7 @@ interface Message {
     options?: string[];
 }
 
-const ALLOWED_CATEGORIES = ["Disease", "Symptoms", "Health Habits"];
+const ALLOWED_CATEGORIES = ["Disease", "Symptom", "Health Habit"];
 
 export default function NewChatPage() {
     const { data: session, status } = useSession();
@@ -154,7 +154,10 @@ export default function NewChatPage() {
         if (overrideInput === "Yes") {
             const lastMsg = messages[messages.length - 1].content;
             const confirmedName = lastMsg.replace("Did you mean ", "").replace("?", "");
-            const formatted = confirmedName.charAt(0).toUpperCase() + confirmedName.slice(1).toLowerCase();
+            const formatted = confirmedName
+                .split(" ")
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(" ");
 
             setTopicName(formatted);
             setIsNamingTopic(false);
@@ -223,8 +226,12 @@ export default function NewChatPage() {
 
                 // Perfectly Valid
                 const cleanName = valData.validatedName || textToSend;
-                const formatted = cleanName.charAt(0).toUpperCase() + cleanName.slice(1).toLowerCase();
-                setTopicName(formatted);
+                const formattedName = cleanName
+                    .split(" ")
+                    .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                    .join(" ");
+
+                setTopicName(formattedName);
                 setIsNamingTopic(false);
             }
 

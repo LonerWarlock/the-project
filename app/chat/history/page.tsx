@@ -6,10 +6,12 @@ import { useRouter } from "next/navigation";
 import {
     Loader2,
     MessageSquare,
-    ChevronRight,
     Sparkles,
-    ArrowLeft,
-    History
+    Activity,
+    Stethoscope,
+    Heart,
+    History,
+    Plus // Added for New Chat button
 } from "lucide-react";
 
 interface ChatRecord {
@@ -21,7 +23,6 @@ interface ChatRecord {
     messages: any[];
 }
 
-// Dynamic styling based on Chat Category
 const getCategoryStyles = (category: string) => {
     switch (category?.toLowerCase()) {
         case "disease":
@@ -33,8 +34,9 @@ const getCategoryStyles = (category: string) => {
                 dateText: "text-purple-500",
                 dateNum: "text-purple-900",
                 hoverBg: "group-hover:bg-purple-600",
+                icon: <Stethoscope size={18} className="text-purple-600"/> 
             };
-        case "symptoms":
+        case "symptom":
             return {
                 bg: "bg-rose-50",
                 text: "text-rose-600",
@@ -43,8 +45,9 @@ const getCategoryStyles = (category: string) => {
                 dateText: "text-rose-500",
                 dateNum: "text-rose-900",
                 hoverBg: "group-hover:bg-rose-600",
+                icon: <Heart size={18} className="text-rose-600" />
             };
-        case "health habits":
+        case "health habit":
             return {
                 bg: "bg-sky-50",
                 text: "text-sky-600",
@@ -53,6 +56,7 @@ const getCategoryStyles = (category: string) => {
                 dateText: "text-sky-500",
                 dateNum: "text-sky-900",
                 hoverBg: "group-hover:bg-sky-600",
+                icon: <Activity size={18} className="text-sky-600" />
             };
         default:
             return {
@@ -63,6 +67,7 @@ const getCategoryStyles = (category: string) => {
                 dateText: "text-indigo-500",
                 dateNum: "text-indigo-900",
                 hoverBg: "group-hover:bg-indigo-600",
+                icon: <Sparkles size={18} className="text-indigo-600"/>
             };
     }
 };
@@ -103,14 +108,23 @@ export default function HistoryPage() {
         <div className="min-h-screen bg-slate-50 p-6 font-sans">
             <div className="max-w-4xl mx-auto">
 
-                {/* Navigation */}
-                
+                {/* Header with Side-by-Side Action */}
+                <header className="mb-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-2xl font-black text-indigo-900 flex items-center gap-2 tracking-tight">
+                            <History size={24} /> Saved Chats
+                        </h1>
+                        <p className="text-slate-400 text-sm font-medium">Your archived AI-guided consultations.</p>
+                    </div>
 
-                <header className="mb-10">
-                    <h1 className="text-2xl font-black text-indigo-900 flex items-center gap-2 tracking-tight">
-                        <History size={24} /> Health Enquiries
-                    </h1>
-                    <p className="text-slate-400 text-sm font-medium">Your archived AI-guided consultations.</p>
+                    {/* NEW CHAT BUTTON */}
+                    <button
+                        onClick={() => router.push("/chat")}
+                        className="flex items-center gap-2 px-4 py-4 hover:text-indigo-700 text-white hover:bg-white bg-indigo-700 border-2 hover:border-indigo-700 rounded-xl transition-all active:scale-95 font-black uppercase text-[13px]"
+                    >
+                        <Plus size={14} strokeWidth={5} />
+                        New Chat
+                    </button>
                 </header>
 
                 <div className="grid gap-3">
@@ -165,35 +179,29 @@ export default function HistoryPage() {
                                         <h3 className="text-lg font-black text-slate-800 truncate tracking-tight">
                                             {chat.topicName}
                                         </h3>
-                                        <div className="flex items-center gap-2 mt-1 text-[10px] font-bold text-slate-500 tracking-widest">
-                                            {chat.updatedAt !== chat.createdAt && (<>Created On:<span className="uppercase">
-                                                 {(() => {
-                                                    const dateToDisplay = new Date(chat.createdAt);
-                                                    return dateToDisplay.toLocaleString("en-GB", {
-                                                        day: "2-digit",
-                                                        month: "2-digit",
-                                                        year: "2-digit",
-                                                        hour: "2-digit",
-                                                        minute: "2-digit",
-                                                        hour12: true,
-                                                    }).replace(",", " •"); // Adds a subtle separator between date and time
-                                                })()}
-                                            </span></>)}
+                                        <div className="flex items-center gap-2 mt-1 text-[10px] font-bold text-slate-500 tracking-widest uppercase">
+                                            {chat.updatedAt !== chat.createdAt && (
+                                                <>
+                                                    Created: 
+                                                    <span className="text-slate-400">
+                                                        {new Date(chat.createdAt).toLocaleString("en-GB", {
+                                                            day: "2-digit",
+                                                            month: "2-digit",
+                                                            year: "2-digit",
+                                                            hour: "2-digit",
+                                                            minute: "2-digit",
+                                                            hour12: true,
+                                                        }).replace(",", " •")}
+                                                    </span>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
 
-                                    {/* Icon & Arrow Area */}
+                                    {/* Icon Area */}
                                     <div className="flex items-center gap-4">
                                         <div className={`h-10 w-10 rounded-xl ${styles.bg} flex items-center justify-center group-hover:scale-105 transition-transform`}>
-                                            <Sparkles size={18} className={styles.text} />
-                                        </div>
-                                        <div
-                                            className={`h-8 w-8 rounded-full ${styles.bg} flex items-center justify-center ${styles.hoverBg} transition-colors`}
-                                        >
-                                            <ChevronRight
-                                                size={16}
-                                                className={`${styles.text} group-hover:text-white`}
-                                            />
+                                            {styles.icon}
                                         </div>
                                     </div>
                                 </div>
