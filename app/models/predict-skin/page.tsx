@@ -172,7 +172,7 @@ export default function PredictSkinPage() {
       const inputTensor = await processImageToTensor(image);
 
       // 2. Load ONNX Model
-      const session = await ort.InferenceSession.create("/skin_model_7025_v2.onnx");
+      const session = await ort.InferenceSession.create("/skin_model_9625_v4.onnx");
 
       // 3. Run Inference
       const feeds = { input: inputTensor };
