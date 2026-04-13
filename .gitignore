@@ -44,7 +44,7 @@ yarn-error.log*
 next-env.d.ts
 
 #large_datasets -> MUST HAVE
-lib/csv/dataset_246946.csv
+lib/csv/
 
 /lib/generated/prisma
 
