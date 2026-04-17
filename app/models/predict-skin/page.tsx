@@ -12,39 +12,21 @@ import {
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import DiagnosisReportImg from "@/components/DiagnosisReportImg";
-import AlertDialog from "@/components/AlertDialog"; // <-- Imported Alert Dialog
+import AlertDialog from "@/components/AlertDialog";
 import * as ort from "onnxruntime-web";
 
-// ⚠️ MUST remain in alphabetical order based on the original training folders!
 const SKIN_CLASSES = [
-  "Acne & Rosacea",                               // 0
-  "Actinic Keratosis & Malignant Lesions",        // 1
-  "Atopic Dermatitis",                            // 2
-  "Bullous Disease",                              // 3
-  "Cellulitis & Bacterial Infections",            // 4
-  "Eczema",                                       // 5
-  "Exanthems & Drug Eruptions",                   // 6
-  "Alopecia & Hair Diseases",                     // 7
-  "Herpes, HPV & STDs",                           // 8
-  "Pigmentation Disorders",                       // 9
-  "Lupus & Connective Tissue Diseases",           // 10
-  "Melanoma & Moles",                             // 11
-  "Nail Fungus & Nail Diseases",                  // 12
-  "Other / Unclassified",                         // 13
-  "Healthy Skin",                                 // 14
-  "Poison Ivy & Contact Dermatitis",              // 15
-  "Psoriasis & Lichen Planus",                    // 16
-  "Scabies, Lyme & Bug Bites",                    // 17
-  "Seborrheic Keratoses & Benign Tumors",         // 18
-  "Systemic Disease",                             // 19
-  "Ringworm, Candidiasis & Fungal Infections",    // 20
-  "Urticaria (Hives)",                            // 21
-  "Vascular Tumors",                              // 22
-  "Vasculitis",                                   // 23
-  "Warts, Molluscum & Viral Infections",          // 24
+  "Acne & Rosacea", "Actinic Keratosis & Malignant Lesions", "Atopic Dermatitis",
+  "Bullous Disease", "Cellulitis & Bacterial Infections", "Eczema",
+  "Exanthems & Drug Eruptions", "Alopecia & Hair Diseases", "Herpes, HPV & STDs",
+  "Pigmentation Disorders", "Lupus & Connective Tissue Diseases", "Melanoma & Moles",
+  "Nail Fungus & Nail Diseases", "Other / Unclassified", "Healthy Skin",
+  "Poison Ivy & Contact Dermatitis", "Psoriasis & Lichen Planus",
+  "Scabies, Lyme & Bug Bites", "Seborrheic Keratoses & Benign Tumors",
+  "Systemic Disease", "Ringworm, Candidiasis & Fungal Infections",
+  "Urticaria (Hives)", "Vascular Tumors", "Vasculitis", "Warts, Molluscum & Viral Infections",
 ];
 
-// Mathematical Softmax function to convert raw scores into percentages
 function softmax(arr: number[]): number[] {
   const max = Math.max(...arr);
   const exps = arr.map(x => Math.exp(x - max));
@@ -58,7 +40,6 @@ export default function PredictSkinPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
 
-  // --- State Hooks ---
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [predictions, setPredictions] = useState<any[] | null>(null);
@@ -66,47 +47,35 @@ export default function PredictSkinPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isAlertOpen, setIsAlertOpen] = useState(false); // <-- Alert Box State
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
 
-  // --- Auth Guard ---
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/");
-    }
+    if (status === "unauthenticated") router.push("/");
   }, [status, router]);
 
-  // --- Image Processing Pipeline ---
   const processImageToTensor = async (file: File): Promise<ort.Tensor> => {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
-        // 1. Create a hidden 224x224 canvas
         const canvas = document.createElement("canvas");
         canvas.width = 224;
         canvas.height = 224;
         const ctx = canvas.getContext("2d");
         if (!ctx) return reject(new Error("Canvas not supported"));
-
-        // 2. Draw and squish the image to exactly 224x224
         ctx.drawImage(img, 0, 0, 224, 224);
         const imageData = ctx.getImageData(0, 0, 224, 224).data;
-
-        // 3. Prepare the Float32Array for PyTorch (1 batch, 3 channels, 224x224)
         const float32Data = new Float32Array(3 * 224 * 224);
-        const mean = [0.485, 0.456, 0.406]; // ImageNet standard means
-        const std = [0.229, 0.224, 0.225];  // ImageNet standard deviations
+        const mean = [0.485, 0.456, 0.406];
+        const std = [0.229, 0.224, 0.225];
 
-        // 4. Extract pixels, Normalize, and arrange in NCHW format
         for (let i = 0; i < 224 * 224; i++) {
           const r = imageData[i * 4] / 255.0;
           const g = imageData[i * 4 + 1] / 255.0;
           const b = imageData[i * 4 + 2] / 255.0;
-
-          float32Data[i] = (r - mean[0]) / std[0]; // Red Channel
-          float32Data[224 * 224 + i] = (g - mean[1]) / std[1]; // Green Channel
-          float32Data[2 * 224 * 224 + i] = (b - mean[2]) / std[2]; // Blue Channel
+          float32Data[i] = (r - mean[0]) / std[0];
+          float32Data[224 * 224 + i] = (g - mean[1]) / std[1];
+          float32Data[2 * 224 * 224 + i] = (b - mean[2]) / std[2];
         }
-
         resolve(new ort.Tensor("float32", float32Data, [1, 3, 224, 224]));
       };
       img.onerror = reject;
@@ -114,7 +83,6 @@ export default function PredictSkinPage() {
     });
   };
 
-  // --- Handlers ---
   const handleFile = (file: File) => {
     setError(null);
     if (!file.type.startsWith("image/")) {
@@ -133,57 +101,19 @@ export default function PredictSkinPage() {
     setShowReport(false);
   };
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragActive(false);
-    if (e.dataTransfer.files?.[0]) handleFile(e.dataTransfer.files[0]);
-  }, []);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragActive(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragActive(false);
-  }, []);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) handleFile(e.target.files[0]);
-  };
-
-  const clearImage = () => {
-    setImage(null);
-    setImagePreview(null);
-    setPredictions(null);
-    setShowReport(false);
-    setError(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  // --- THE ONNX INFERENCE ENGINE ---
   const handlePredict = async () => {
     if (!image) return;
     setLoading(true);
     setError(null);
     try {
-      // 1. Process Image into Tensor
       const inputTensor = await processImageToTensor(image);
-
-      // 2. Load ONNX Model
       const session = await ort.InferenceSession.create("/skin_model_9625_v4.onnx");
-
-      // 3. Run Inference
       const feeds = { input: inputTensor };
       const results = await session.run(feeds);
-
-      // 4. Extract outputs and calculate softmax percentages
       const outputTensor = results[session.outputNames[0]];
       const rawScores = Array.from(outputTensor.data as Float32Array);
       const probabilities = softmax(rawScores);
 
-      // 5. Map to Class Names, Sort, and grab Top 3
       const mappedResults = probabilities
         .map((prob, index) => ({
           disease: SKIN_CLASSES[index],
@@ -192,16 +122,13 @@ export default function PredictSkinPage() {
         .sort((a, b) => b.confidence - a.confidence)
         .slice(0, 3);
 
-      // 6. 🛑 INTERCEPT: Check if top result is "Other / Unclassified"
       if (mappedResults[0].disease === "Other / Unclassified") {
         setIsAlertOpen(true);
       } else {
         setPredictions(mappedResults);
         setShowReport(true);
       }
-
     } catch (err: any) {
-      console.error(err);
       setError("Error analyzing image. Please try again.");
     } finally {
       setLoading(false);
@@ -214,43 +141,29 @@ export default function PredictSkinPage() {
     try {
       const uploadFormData = new FormData();
       uploadFormData.append("image", image);
-
-      const uploadRes = await fetch("/api/upload", {
-        method: "POST",
-        body: uploadFormData,
-      });
-
+      const uploadRes = await fetch("/api/upload", { method: "POST", body: uploadFormData });
       if (!uploadRes.ok) throw new Error("Failed to upload image");
       const { url } = await uploadRes.json();
-
       const res = await fetch("/api/predictions/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          symptoms: [image.name],
-          results: predictions,
-          modelUsed: "skin",
-          imageUrl: url,
-        }),
+        body: JSON.stringify({ symptoms: [image.name], results: predictions, modelUsed: "skin", imageUrl: url }),
       });
       if (res.ok) router.push("/history");
-      else {
-        const errorData = await res.json();
-        alert(`Error: ${errorData.error || "Failed to save"}`);
-      }
     } catch (err) {
-      console.error("Save error:", err);
       alert("Network error. Please try again.");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const formatFileName = (name: string) => {
-    if (name.length <= 20) return name;
-    const extension = name.split('.').pop();
-    const baseName = name.substring(0, name.lastIndexOf('.'));
-    return `${baseName.substring(0, 10)}...${baseName.slice(-5)}.${extension}`;
+  const clearImage = () => {
+    setImage(null);
+    setImagePreview(null);
+    setPredictions(null);
+    setShowReport(false);
+    setError(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   if (status === "loading") {
@@ -261,12 +174,8 @@ export default function PredictSkinPage() {
     );
   }
 
-  if (!session) return null;
-
   return (
-    <div className="h-screen overflow-hidden bg-slate-50 text-slate-800 p-4 font-sans flex flex-col transition-all duration-300">
-
-      {/* --- ALERT DIALOG FOR UNCLASSIFIED IMAGES --- */}
+    <div className="min-h-screen bg-slate-50 text-slate-800 p-4 md:p-8 font-sans transition-all duration-300">
       <AlertDialog
         isOpen={isAlertOpen}
         onClose={() => setIsAlertOpen(false)}
@@ -275,174 +184,106 @@ export default function PredictSkinPage() {
         yesText="Okay"
         yesColor="indigo"
         noText=""
-        onYes={() => {
-          setIsAlertOpen(false);
-          clearImage(); // Clears the bad image out of the UI
-        }}
+        onYes={() => { setIsAlertOpen(false); clearImage(); }}
       />
 
-      <div className="max-w-3xl mx-auto w-full flex-1 flex flex-col overflow-hidden">
+      <div className="max-w-4xl mx-auto w-full">
         {showReport && predictions ? (
-          /* --- REPORT VIEW MODE --- */
-          <div className="h-full flex flex-col animate-in fade-in zoom-in-95 duration-500 overflow-hidden">
-            <div className="flex items-center justify-between mb-4 bg-slate-50/80 backdrop-blur-sm sticky top-0 z-10 py-2 shrink-0">
+          <div className="animate-in fade-in zoom-in-95 duration-500">
+            <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
               <button
                 onClick={() => setShowReport(false)}
-                className="flex items-center gap-2 text-[10px] font-black text-emerald-600 hover:text-emerald-800 transition-colors uppercase tracking-[0.2em]"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 text-[10px] font-black text-emerald-600 hover:text-emerald-800 transition-colors uppercase tracking-[0.2em]"
               >
-                <ArrowLeft size={14} /> Edit
+                <ArrowLeft size={14} /> Back to Edit
               </button>
-
               <button
                 onClick={savePrediction}
                 disabled={isSaving}
-                className="flex items-center gap-2 bg-emerald-900 text-emerald-100 hover:text-emerald-900 hover:border px-5 py-2.5 rounded-xl text-[10px] font-black hover:bg-emerald-100 transition-all shadow-lg active:scale-95 disabled:opacity-50 uppercase tracking-widest"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-900 text-emerald-100 px-6 py-3 rounded-xl text-[10px] font-black hover:bg-emerald-800 transition-all shadow-lg active:scale-95 disabled:opacity-50 uppercase tracking-widest"
               >
                 <Activity size={14} />
                 {isSaving ? "Saving..." : "Save Record"}
               </button>
             </div>
-
-            <div className="flex-1 flex flex-col justify-center overflow-hidden pb-10">
-              <DiagnosisReportImg
-                symptoms={[formatFileName(image?.name || "Uploaded Image")]}
-                results={predictions}
-                date={new Date().toISOString()}
-                engine="Dermal Vision"
-                imagePreview={imagePreview}
-              />
-            </div>
+            <DiagnosisReportImg
+              symptoms={[image?.name || "Uploaded Image"]}
+              results={predictions}
+              date={new Date().toISOString()}
+              engine="Dermal Vision"
+              imagePreview={imagePreview}
+            />
           </div>
         ) : (
-          /* --- UPLOAD UI MODE --- */
-          <div className="relative animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col h-full overflow-hidden">
-            <div className="mb-4 text-center shrink-0">
-              <h1 className="text-4xl font-black text-emerald-600 mb-2 tracking-tight">
-                Dermal Vision
-              </h1>
-              <p className="text-xs font-bold text-slate-400 tracking-widest">
-                ID:{" "}
-                <span className="text-emerald-600">{session.user?.email}</span>
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <header className="mb-8 text-center">
+              <h1 className="text-3xl md:text-5xl font-black text-emerald-600 mb-2 tracking-tight">Dermal Vision</h1>
+              <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase truncate max-w-xs mx-auto">
+                ID: <span className="text-emerald-600">{session?.user?.email}</span>
               </p>
-            </div>
+            </header>
 
             {error && (
-              <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-2xl flex items-start gap-3 shrink-0">
-                <AlertTriangle className="text-red-500 shrink-0 mt-0.5" size={18} />
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-start gap-3">
+                <AlertTriangle className="text-red-500 shrink-0" size={20} />
                 <p className="text-xs font-bold text-red-700">{error}</p>
               </div>
             )}
 
-            <div className="mb-4 shrink-0">
-              <h3 className="text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] mb-3">
-                Upload Image
-              </h3>
-
-              {!imagePreview ? (
-                <div
-                  onDrop={handleDrop}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onClick={() => fileInputRef.current?.click()}
-                  className="relative border-2 border-dashed rounded-2xl text-center cursor-pointer transition-all h-48 flex items-center justify-center border-emerald-200 bg-white hover:border-emerald-400 hover:bg-emerald-50/50"
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    onChange={handleInputChange}
-                    className="hidden"
-                  />
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="p-4 rounded-2xl bg-emerald-50">
-                      <Upload className="text-emerald-400" size={32} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-emerald-700">
-                        Drag & drop an image or click to browse
-                      </p>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                        PNG, JPG, WEBP (max 10MB)
-                      </p>
-                    </div>
+            <main className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+              {/* Left Column: Upload */}
+              <section className="space-y-4">
+                <h3 className="text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em]">Upload Image</h3>
+                {!imagePreview ? (
+                  <div
+                    onDrop={(e) => { e.preventDefault(); setDragActive(false); if (e.dataTransfer.files?.[0]) handleFile(e.dataTransfer.files[0]); }}
+                    onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                    onDragLeave={(e) => { e.preventDefault(); setDragActive(false); }}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`relative border-2 border-dashed rounded-3xl text-center cursor-pointer transition-all min-h-[250px] flex flex-col items-center justify-center p-6 ${dragActive ? 'border-emerald-500 bg-emerald-50' : 'border-emerald-200 bg-white hover:border-emerald-400'}`}
+                  >
+                    <input ref={fileInputRef} type="file" accept="image/*" onChange={(e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }} className="hidden" />
+                    <Upload className="text-emerald-300 mb-4" size={48} />
+                    <p className="text-sm font-bold text-emerald-700">Drag image here or tap to browse</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase mt-2">Max 10MB (JPG, PNG, WEBP)</p>
                   </div>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center">
-                  <div className="relative group inline-block">
-                    <div className="relative rounded-2xl border-[3px] border-emerald-500 overflow-hidden shadow-2xl transition-all group-hover:border-emerald-400">
-                      <img
-                        src={imagePreview}
-                        alt="Uploaded skin image"
-                        className="block h-auto w-auto object-contain"
-                        style={{
-                          maxHeight: "calc(100vh - 32rem)",
-                          maxWidth: "100%"
-                        }}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-4 flex flex-col justify-end opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <p className="text-white text-[10px] font-black uppercase tracking-widest truncate">
-                          {formatFileName(image?.name || "")}
-                        </p>
-                        <p className="text-emerald-400 text-[9px] font-bold uppercase tracking-[0.2em]">
-                          {(image?.size ? (image.size / 1024 / 1024).toFixed(2) : 0)} MB
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={clearImage}
-                      className="absolute -top-3 -right-3 z-20 p-2.5 bg-white rounded-full shadow-xl border border-slate-100 text-slate-400 hover:text-red-600 hover:scale-110 active:scale-95 transition-all"
-                    >
-                      <Trash2 size={18} strokeWidth={2.5} />
+                ) : (
+                  <div className="relative group rounded-3xl overflow-hidden border-4 border-emerald-500 shadow-xl bg-white">
+                    <img src={imagePreview} alt="Preview" className="w-full h-auto max-h-[300px] md:max-h-[500px] object-cover" />
+                    <button onClick={clearImage} className="absolute top-4 right-4 p-3 bg-white/90 hover:bg-red-500 hover:text-white rounded-full transition-all shadow-lg">
+                      <Trash2 size={20} />
                     </button>
                   </div>
-                </div>
-              )}
-            </div>
-
-            <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-2xl shrink-0">
-              <h3 className="text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] mb-2">
-                Tips for Best Results
-              </h3>
-              <div className="space-y-1.5">
-                {[
-                  "Ensure good lighting and clear focus",
-                  "Capture the affected area at close range",
-                  "Avoid shadows and glare on the image",
-                  "Include surrounding healthy skin for reference",
-                ].map((tip, i) => (
-                  <div key={i} className="flex items-start gap-2">
-                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 mt-1.5 shrink-0" />
-                    <p className="text-xs text-emerald-700 font-medium">{tip}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-5 flex justify-center shrink-0">
-              <button
-                onClick={handlePredict}
-                disabled={loading || !image}
-                className={`flex items-center gap-3 px-8 py-3 rounded-2xl font-black text-sm transition-all active:scale-95 shadow-lg border-[3px] ${!image
-                  ? "bg-slate-100 text-slate-400 border-slate-300 cursor-not-allowed"
-                  : "bg-emerald-100 text-emerald-900 border-emerald-900 hover:bg-emerald-900 hover:text-white"
-                  }`}
-              >
-                {loading ? (
-                  <Loader2 className="animate-spin" size={18} />
-                ) : (
-                  <Activity size={18} />
                 )}
-                {loading ? "Analyzing..." : "Analyze Image"}
-              </button>
-            </div>
+              </section>
 
-            <div className="mt-auto p-3 rounded-2xl flex items-start gap-3 shrink-0">
-              
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider leading-relaxed">
-                This tool provides preliminary analysis only. Consult your dermatologist for proper diagnosis and treatment.
-              </p>
-            </div>
+              {/* Right Column: Tips & Action */}
+              <section className="space-y-6">
+                <div className="p-6 bg-emerald-50 border border-emerald-100 rounded-3xl">
+                  <h3 className="text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] mb-4">Tips for Best Results</h3>
+                  <ul className="space-y-3">
+                    {["Good lighting & clear focus", "Close-up of the affected area", "Avoid shadows & glare", "Include surrounding healthy skin"].map((tip, i) => (
+                      <li key={i} className="flex items-center gap-3 text-xs text-emerald-700 font-bold">
+                        <div className="h-2 w-2 rounded-full bg-emerald-400 shrink-0" /> {tip}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <button
+                  onClick={handlePredict}
+                  disabled={loading || !image}
+                  className={`w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-black text-sm transition-all shadow-xl ${!image ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-emerald-500 text-white hover:bg-emerald-600 active:scale-[0.98]'}`}
+                >
+                  {loading ? <Loader2 className="animate-spin" size={20} /> : <Activity size={20} />}
+                  {loading ? "Analyzing Specimen..." : "Begin Neural Analysis"}
+                </button>
+
+                <p className="text-[9px] font-bold text-slate-400 uppercase leading-relaxed text-center px-4">
+                  Preliminary neural analysis. Consult a dermatologist for professional medical advice.
+                </p>
+              </section>
+            </main>
           </div>
         )}
       </div>
