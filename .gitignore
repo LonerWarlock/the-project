@@ -51,3 +51,12 @@ lib/csv/
 #jupyter logs -> MUST HAVE
 .ipynb_checkpoints/
 keras_tuner_dir/
+
+# Gaphify - Build artifacts and cache 
+graphify-out/
+.graphifyignore
+
+#Opencode - Local session data and project config
+.opencode/
+opencode.json
+opencode.local.json
