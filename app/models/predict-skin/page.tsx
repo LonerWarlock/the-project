@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Upload,
   Activity,
@@ -175,7 +175,7 @@ export default function PredictSkinPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 p-4 md:p-8 font-sans transition-all duration-300">
+    <div className="min-h-screen bg-slate-50 text-slate-800 p-4 md:p-6 lg:p-8 font-sans">
       <AlertDialog
         isOpen={isAlertOpen}
         onClose={() => setIsAlertOpen(false)}
@@ -200,7 +200,7 @@ export default function PredictSkinPage() {
               <button
                 onClick={savePrediction}
                 disabled={isSaving}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-900 text-emerald-100 px-6 py-3 rounded-xl text-[10px] font-black hover:bg-emerald-800 transition-all shadow-lg active:scale-95 disabled:opacity-50 uppercase tracking-widest"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl text-[10px] font-black hover:bg-emerald-700 transition-all shadow-lg active:scale-95 disabled:opacity-50 uppercase tracking-widest"
               >
                 <Activity size={14} />
                 {isSaving ? "Saving..." : "Save Record"}
@@ -225,13 +225,12 @@ export default function PredictSkinPage() {
 
             {error && (
               <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-start gap-3">
-                <AlertTriangle className="text-red-500 shrink-0" size={20} />
+                <AlertTriangle className="text-red-500 shrink-0 mt-0.5" size={20} />
                 <p className="text-xs font-bold text-red-700">{error}</p>
               </div>
             )}
 
             <main className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-              {/* Left Column: Upload */}
               <section className="space-y-4">
                 <h3 className="text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em]">Upload Image</h3>
                 {!imagePreview ? (
@@ -240,7 +239,11 @@ export default function PredictSkinPage() {
                     onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
                     onDragLeave={(e) => { e.preventDefault(); setDragActive(false); }}
                     onClick={() => fileInputRef.current?.click()}
-                    className={`relative border-2 border-dashed rounded-3xl text-center cursor-pointer transition-all min-h-[250px] flex flex-col items-center justify-center p-6 ${dragActive ? 'border-emerald-500 bg-emerald-50' : 'border-emerald-200 bg-white hover:border-emerald-400'}`}
+                    className={`relative border-2 border-dashed rounded-3xl text-center cursor-pointer transition-all min-h-[280px] flex flex-col items-center justify-center p-6 ${
+                      dragActive
+                        ? "border-emerald-500 bg-emerald-50"
+                        : "border-emerald-200 bg-white hover:border-emerald-400 hover:bg-emerald-50/30"
+                    }`}
                   >
                     <input ref={fileInputRef} type="file" accept="image/*" onChange={(e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }} className="hidden" />
                     <Upload className="text-emerald-300 mb-4" size={48} />
@@ -249,17 +252,21 @@ export default function PredictSkinPage() {
                   </div>
                 ) : (
                   <div className="relative group rounded-3xl overflow-hidden border-4 border-emerald-500 shadow-xl bg-white">
-                    <img src={imagePreview} alt="Preview" className="w-full h-auto max-h-[300px] md:max-h-[500px] object-cover" />
-                    <button onClick={clearImage} className="absolute top-4 right-4 p-3 bg-white/90 hover:bg-red-500 hover:text-white rounded-full transition-all shadow-lg">
-                      <Trash2 size={20} />
-                    </button>
+                    <img src={imagePreview} alt="Skin preview" className="w-full h-auto max-h-[400px] object-contain bg-slate-100" />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all flex items-start justify-end p-4">
+                      <button
+                        onClick={clearImage}
+                        className="p-3 bg-white/90 hover:bg-red-500 hover:text-white rounded-full transition-all shadow-lg opacity-0 group-hover:opacity-100"
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                    </div>
                   </div>
                 )}
               </section>
 
-              {/* Right Column: Tips & Action */}
               <section className="space-y-6">
-                <div className="p-6 bg-emerald-50 border border-emerald-100 rounded-3xl">
+                <div className="p-6 bg-emerald-50 border border-emerald-200 rounded-3xl">
                   <h3 className="text-[10px] font-black text-emerald-800 uppercase tracking-[0.2em] mb-4">Tips for Best Results</h3>
                   <ul className="space-y-3">
                     {["Good lighting & clear focus", "Close-up of the affected area", "Avoid shadows & glare", "Include surrounding healthy skin"].map((tip, i) => (
@@ -273,7 +280,11 @@ export default function PredictSkinPage() {
                 <button
                   onClick={handlePredict}
                   disabled={loading || !image}
-                  className={`w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-black text-sm transition-all shadow-xl ${!image ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-emerald-500 text-white hover:bg-emerald-600 active:scale-[0.98]'}`}
+                  className={`w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-black text-sm transition-all shadow-xl ${
+                    !image
+                      ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+                      : "bg-emerald-600 text-white hover:bg-emerald-700 active:scale-[0.98]"
+                  }`}
                 >
                   {loading ? <Loader2 className="animate-spin" size={20} /> : <Activity size={20} />}
                   {loading ? "Analyzing Specimen..." : "Begin Neural Analysis"}

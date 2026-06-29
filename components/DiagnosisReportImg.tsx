@@ -17,13 +17,14 @@ export default function DiagnosisReportImg({
   imagePreview,
 }: ReportProps) {
   return (
-    <div className="bg-white rounded-2xl border border-emerald-400 shadow-xl overflow-hidden">
-      <div className="flex h-full">
+    <div className="bg-white rounded-2xl border border-emerald-400 shadow-xl overflow-hidden w-full">
+      {/* Mobile: Stack vertically, Desktop: Side by side */}
+      <div className="flex flex-col lg:flex-row h-full">
         {/* Left Side - Image Preview */}
-        <div className="w-2/5 shrink-0 bg-slate-100 flex flex-col items-center justify-center p-4 border-r border-emerald-200">
+        <div className="w-full lg:w-2/5 shrink-0 bg-slate-100 flex flex-col items-center justify-center p-4 lg:border-r lg:border-emerald-200">
           {imagePreview ? (
             <>
-              <div className="relative rounded-xl overflow-hidden border-2 border-emerald-300 bg-white shadow-md inline-block">
+              <div className="relative rounded-xl overflow-hidden border-2 border-emerald-300 bg-white shadow-md inline-block w-full max-w-[200px] lg:max-w-none">
                 <img
                   src={imagePreview}
                   alt="Analyzed skin image"
@@ -41,20 +42,20 @@ export default function DiagnosisReportImg({
         </div>
 
         {/* Right Side - Diagnosis Report */}
-        <div className="flex-1 p-5 flex flex-col overflow-hidden h-full">
+        <div className="flex-1 p-4 md:p-5 flex flex-col overflow-hidden h-full">
           {/* Header Section */}
-          <div className="shrink-0 mb-4 flex justify-between items-center">
+          <div className="shrink-0 mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
-              <h2 className="text-lg font-black text-slate-900 leading-none">
+              <h2 className="text-base md:text-lg font-black text-slate-900 leading-none">
                 Diagnosis Report
               </h2>
-              <p className="text-slate-400 text-[9px] font-bold uppercase tracking-widest mt-1 flex items-center">
+              <p className="text-slate-400 text-[9px] font-bold uppercase tracking-widest mt-1 flex items-center flex-wrap gap-1">
                 {new Date(date).toLocaleDateString("en-GB", {
                   day: "2-digit",
                   month: "short",
                   year: "numeric",
                 })}
-                <span className="mx-2 w-1 h-1 rounded-full bg-emerald-400 shrink-0" />
+                <span className="mx-1 w-1 h-1 rounded-full bg-emerald-400 shrink-0" />
                 {new Date(date).toLocaleTimeString("en-GB", {
                   hour: "2-digit",
                   minute: "2-digit",
@@ -73,21 +74,21 @@ export default function DiagnosisReportImg({
               <h4 className="text-xs font-black text-emerald-600 uppercase tracking-widest mb-3">
                 AI Analysis ({engine} engine)
               </h4>
-              <div className="space-y-3">
+              <div className="space-y-2 md:space-y-3">
                 {results.map((r, i) => (
                   <div
                     key={i}
-                    className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 gap-2"
                   >
-                    <span className="font-bold text-slate-800 text-sm">{r.disease}</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-20 h-2 bg-slate-200 rounded-full overflow-hidden">
+                    <span className="font-bold text-slate-800 text-sm truncate flex-1">{r.disease}</span>
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <div className="flex-1 sm:w-20 h-2 bg-slate-200 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-emerald-400"
                           style={{ width: `${r.confidence}%` }}
                         />
                       </div>
-                      <span className="text-sm font-black text-emerald-600 w-10 text-right">
+                      <span className="text-sm font-black text-emerald-600 w-10 text-right shrink-0">
                         {r.confidence}%
                       </span>
                     </div>
@@ -99,9 +100,9 @@ export default function DiagnosisReportImg({
 
           {/* Footer Disclaimer - Pushed to bottom via mt-auto */}
           <div className="mt-auto pt-4 shrink-0 border-t border-slate-50">
-            <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100 flex gap-3">
+            <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100 flex gap-2 md:gap-3">
               <AlertTriangle className="text-emerald-600 shrink-0 mt-0.5" size={16} />
-              <p className="text-[11px] text-emerald-800 leading-relaxed">
+              <p className="text-[10px] md:text-[11px] text-emerald-800 leading-relaxed">
                 This report was generated by the {engine} AI model. Please consult a
                 qualified medical professional before taking further steps.
               </p>

@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
          * This allows NextAuth to handle /api/auth while your Python 
          * backend handles everything else.
          */
-        source: '/api/((?!auth).*)', 
+        source: '/api/((?!auth|chat|predictions|upload|related_symptoms).*)', 
         destination: `${apiUrl}/api/:1`,
       },
     ]
