@@ -14,6 +14,8 @@ export default function DetailedHistoryPage() {
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  useEffect(() => { document.title = "Saved Report | Asclepius AI"; }, []);
+
   useEffect(() => {
     fetch("/api/predictions/history")
       .then((res) => res.json())

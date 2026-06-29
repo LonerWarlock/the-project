@@ -19,6 +19,7 @@ export default function ChatDetailView() {
   const { id } = useParams();
   const { status } = useSession();
   const router = useRouter();
+  useEffect(() => { document.title = "Chat History | Asclepius AI"; }, []);
   
   const [chat, setChat] = useState<any>(null);
   const [loading, setLoading] = useState(true);

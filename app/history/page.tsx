@@ -48,6 +48,7 @@ const getModelStyles = (model: string) => {
 export default function HistoryPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  useEffect(() => { document.title = "Saved Reports | Asclepius AI"; }, []);
   const [records, setRecords] = useState<PredictionRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);

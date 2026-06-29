@@ -73,6 +73,7 @@ const getCategoryStyles = (category: string) => {
 export default function HistoryPage() {
     const { data: session, status } = useSession();
     const router = useRouter();
+    useEffect(() => { document.title = "Saved Chats | Asclepius AI"; }, []);
     const [chats, setChats] = useState<ChatRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [deleteId, setDeleteId] = useState<string | null>(null);

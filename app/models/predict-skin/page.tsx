@@ -38,6 +38,7 @@ function softmax(arr: number[]): number[] {
 export default function PredictSkinPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  useEffect(() => { document.title = "Dermal Vision | Asclepius AI"; }, []);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
 

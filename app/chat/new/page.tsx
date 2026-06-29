@@ -30,6 +30,7 @@ function NewChatContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const category = searchParams.get("category");
+    useEffect(() => { document.title = "New Chat | Asclepius AI"; }, []);
 
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");

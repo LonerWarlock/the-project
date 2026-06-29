@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Stethoscope, Loader2, User, Mail, MapPin, Phone, BookOpen, ShieldCheck, AlertCircle } from "lucide-react";
 
 export default function DoctorSignup() {
   const router = useRouter();
+  useEffect(() => { document.title = "Doctor Registration | Asclepius AI"; }, []);
   const [form, setForm] = useState({
     name: "", email: "", specialization: "", qualification: "", locality: "", contactNumber: "", password: "", confirmPassword: "",
   });

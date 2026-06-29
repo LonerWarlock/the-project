@@ -8,8 +8,11 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Core2Cover AI",
-  description: "A professional-grade diagnostic assistant.",
+  title: {
+    default: "Asclepius AI",
+    template: "%s | Asclepius AI",
+  },
+  description: "Professional-grade AI-powered diagnostic assistant for multi-modal health analysis, disease prediction, and doctor appointment scheduling.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

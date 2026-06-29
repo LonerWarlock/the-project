@@ -1,4 +1,5 @@
 "use client";
+import { useEffect } from "react";
 import Link from "next/link";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { motion } from "framer-motion";
@@ -6,6 +7,7 @@ import { Activity, Brain, Microscope, ShieldCheck, LogOut, Stethoscope } from "l
 
 export default function Home() {
   const { data: session } = useSession();
+  useEffect(() => { document.title = "Asclepius AI"; }, []);
 
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-hidden bg-white font-sans text-slate-900">
@@ -95,7 +97,7 @@ export default function Home() {
         </div>
 
         <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-slate-400">
-          Asclepius Terminal | 2026 Edition
+          Asclepius AI | 2026 Edition
         </p>
       </main>
     </div>

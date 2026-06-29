@@ -69,6 +69,7 @@ function getAuthHeaders() {
 
 export default function DoctorDashboard() {
   const router = useRouter();
+  useEffect(() => { document.title = "Doctor Dashboard | Asclepius AI"; }, []);
   const [doctor, setDoctor] = useState<DoctorInfo | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);

@@ -82,6 +82,8 @@ export default function AppointmentsPage() {
   const [showReport, setShowReport] = useState(false);
   const [reportData, setReportData] = useState<NonNullable<Appointment["predictionData"]> | null>(null);
 
+  useEffect(() => { document.title = "My Appointments | Asclepius AI"; }, []);
+
   useEffect(() => {
     if (status === "unauthenticated") router.push("/");
     if (status !== "authenticated") return;

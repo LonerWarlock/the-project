@@ -15,6 +15,7 @@ import {
 export default function ChatLandingPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  useEffect(() => { document.title = "Ask AI | Asclepius AI"; }, []);
 
   if (status === "loading") return null;
   if (status === "unauthenticated") {

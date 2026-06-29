@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Stethoscope, Loader2, Mail, Lock, LogIn, AlertCircle } from "lucide-react";
 
 export default function DoctorLogin() {
   const router = useRouter();
+  useEffect(() => { document.title = "Doctor Login | Asclepius AI"; }, []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);

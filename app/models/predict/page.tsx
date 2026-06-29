@@ -33,6 +33,7 @@ const COMMON_SYMPTOMS = [
 export default function PredictPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  useEffect(() => { document.title = "Basic Diagnosis | Asclepius AI"; }, []);
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);

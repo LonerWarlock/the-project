@@ -25,6 +25,7 @@ interface Article {
 export default function TrendsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  useEffect(() => { document.title = "Health Trends | Asclepius AI"; }, []);
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");

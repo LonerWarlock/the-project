@@ -56,6 +56,8 @@ export default function ModelsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
+  useEffect(() => { document.title = "Diagnostic Models | Asclepius AI"; }, []);
+
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/");
