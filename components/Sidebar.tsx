@@ -18,7 +18,7 @@ import {
 import { signOut, useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const navItems = [
+const userNavItems = [
   { name: "Appointments", href: "/appointments", icon: Calendar, desc: "Schedule visits" },
   { name: "Saved Reports", href: "/history", icon: History, desc: "Clinical archive" },
   { name: "AI Models", href: "/models", icon: Database, desc: "Diagnostic suite" },
@@ -29,13 +29,55 @@ const navItems = [
 export default function Sidebar() {
   const { data: session, status } = useSession();
   const pathname = usePathname();
-  
   const [imgError, setImgError] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
   if (status !== "authenticated") return null;
 
-  const SidebarContent = () => (
+  return (
+    <>
+      <div className="fixed top-4 left-4 z-[60] lg:hidden">
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="p-3 bg-white border border-slate-100 rounded-2xl shadow-xl text-indigo-600 active:scale-90 transition-transform"
+        >
+          {isOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+      </div>
+
+      <aside className="hidden lg:flex h-screen w-72 flex-col border-r border-slate-100 bg-white/90 font-sans backdrop-blur-xl shrink-0 z-50 sticky top-0">
+        <SidebarContent session={session} pathname={pathname} imgError={imgError} setImgError={setImgError} setIsOpen={setIsOpen} />
+      </aside>
+
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsOpen(false)}
+              className="fixed inset-0 bg-indigo-950/20 backdrop-blur-sm z-[55] lg:hidden"
+            />
+            
+            <motion.aside
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed top-0 left-0 inset-y-0 w-[280px] md:w-72 flex flex-col bg-white border-r border-slate-100 z-[56] lg:hidden shadow-2xl"
+            >
+              <SidebarContent session={session} pathname={pathname} imgError={imgError} setImgError={setImgError} setIsOpen={setIsOpen} />
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
+function SidebarContent({ session, pathname, imgError, setImgError, setIsOpen }: any) {
+  return (
     <div className="flex flex-col h-full">
       <div className="p-4 md:p-6 pb-3 md:pb-4 shrink-0">
         <Link href="/" className="group block transition-all active:scale-95" onClick={() => setIsOpen(false)}>
@@ -56,7 +98,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-4 space-y-1.5 mt-1">
-        {navItems.map((item) => {
+        {userNavItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
           return (
             <Link
@@ -91,11 +133,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="p-4 border-t border-slate-50 bg-white mt-auto shrink-0">
-        <Link
-          href="/profile"
-          onClick={() => setIsOpen(false)}
-          className="group flex items-center gap-3 rounded-2xl bg-slate-50 p-3 shadow-sm border border-slate-100 transition-all hover:border-indigo-200 hover:shadow-md mb-3"
-        >
+        <div className="group flex items-center gap-3 rounded-2xl bg-slate-50 p-3 shadow-sm border border-slate-100 transition-all hover:border-indigo-200 hover:shadow-md mb-3">
           <div className="h-10 w-10 flex-shrink-0 rounded-xl bg-gradient-to-br from-indigo-50 to-slate-100 flex items-center justify-center text-indigo-600 font-black text-sm border border-white overflow-hidden shadow-inner">
             {session?.user?.image && !imgError ? (
               <img
@@ -118,7 +156,7 @@ export default function Sidebar() {
               Active Session
             </span>
           </div>
-        </Link>
+        </div>
 
         <button
           onClick={() => signOut({ callbackUrl: "/" })}
@@ -129,46 +167,5 @@ export default function Sidebar() {
         </button>
       </div>
     </div>
-  );
-
-  return (
-    <>
-      <div className="fixed top-4 left-4 z-[60] lg:hidden">
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="p-3 bg-white border border-slate-100 rounded-2xl shadow-xl text-indigo-600 active:scale-90 transition-transform"
-        >
-          {isOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
-      </div>
-
-      <aside className="hidden lg:flex h-screen w-72 flex-col border-r border-slate-100 bg-white/90 font-sans backdrop-blur-xl shrink-0 z-50 sticky top-0">
-        <SidebarContent />
-      </aside>
-
-      <AnimatePresence>
-        {isOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsOpen(false)}
-              className="fixed inset-0 bg-indigo-950/20 backdrop-blur-sm z-[55] lg:hidden"
-            />
-            
-            <motion.aside
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed top-0 left-0 inset-y-0 w-[280px] md:w-72 flex flex-col bg-white border-r border-slate-100 z-[56] lg:hidden shadow-2xl"
-            >
-              <SidebarContent />
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
-    </>
   );
 }

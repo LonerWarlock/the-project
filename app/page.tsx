@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { motion } from "framer-motion";
-import { Activity, Brain, Microscope, ShieldCheck, LogOut } from "lucide-react";
+import { Activity, Brain, Microscope, ShieldCheck, LogOut, Stethoscope } from "lucide-react";
 
 export default function Home() {
   const { data: session } = useSession();
@@ -51,17 +51,25 @@ export default function Home() {
                 </button>
               </>
             ) : (
-              <button
-                onClick={() => signIn("google")}
-                className="flex h-14 items-center justify-center gap-4 rounded-2xl border-2 border-indigo-600 px-12 text-lg font-bold text-indigo-600 shadow-xl shadow-slate-100 transition-all hover:bg-indigo-50 active:scale-95"
-              >
-                <img
-                  src="https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_128dp.png"
-                  alt="Google"
-                  className="h-6 w-6"
-                />
-                Continue with Google
-              </button>
+              <>
+                <button
+                  onClick={() => signIn("google")}
+                  className="flex h-14 items-center justify-center gap-4 rounded-2xl border-2 border-indigo-600 px-12 text-lg font-bold text-indigo-600 shadow-xl shadow-slate-100 transition-all hover:bg-indigo-50 active:scale-95"
+                >
+                  <img
+                    src="https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_128dp.png"
+                    alt="Google"
+                    className="h-6 w-6"
+                  />
+                  Continue with Google
+                </button>
+                <Link
+                  href="/doctors/login"
+                  className="flex h-12 items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 px-8 text-sm font-bold text-slate-500 transition-all hover:bg-slate-50 hover:text-indigo-600 active:scale-95"
+                >
+                  <ShieldCheck size={16} /> Doctor Portal
+                </Link>
+              </>
             )}
           </div>
         </motion.div>

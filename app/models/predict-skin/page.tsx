@@ -12,6 +12,7 @@ import {
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import DiagnosisReportImg from "@/components/DiagnosisReportImg";
+import DoctorRecommendation from "@/components/DoctorRecommendation";
 import AlertDialog from "@/components/AlertDialog";
 import * as ort from "onnxruntime-web";
 
@@ -213,6 +214,7 @@ export default function PredictSkinPage() {
               engine="Dermal Vision"
               imagePreview={imagePreview}
             />
+            <DoctorRecommendation diseases={predictions.map(p => p.disease)} predictionData={{ symptoms: [image?.name || "Uploaded Image"], results: predictions, engine: "Dermal Vision", date: new Date().toISOString(), imageUrl: imagePreview || undefined }} />
           </div>
         ) : (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">

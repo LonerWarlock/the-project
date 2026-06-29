@@ -12,6 +12,7 @@ import { ALL_SYMPTOMS } from "@/lib/symptoms-list";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import DiagnosisReport from "@/components/DiagnosisReport";
+import DoctorRecommendation from "@/components/DoctorRecommendation";
 
 const formatName = (name: string) =>
   name.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
@@ -197,6 +198,7 @@ export default function PredictPage() {
                 date={new Date().toISOString()}
                 engine="Basic"
               />
+              <DoctorRecommendation diseases={predictions.map(p => p.disease)} predictionData={{ symptoms: selected, results: predictions, engine: "Basic", date: new Date().toISOString() }} />
             </div>
           </div>
         ) : (

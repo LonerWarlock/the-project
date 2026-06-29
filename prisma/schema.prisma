@@ -84,3 +84,38 @@ model Prediction {
   
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+model Doctor {
+  id             String        @id @default(cuid())
+  name           String
+  email          String        @unique
+  specialization String
+  qualification  String
+  locality       String
+  contactNumber  String
+  image          String?
+  password       String?
+  sessionToken   String?
+  available      Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  appointments   Appointment[]
+}
+
+model Appointment {
+  id              String    @id @default(cuid())
+  userId          String
+  doctorId        String
+  patientName     String
+  patientAge      Int
+  patientSex      String
+  locality        String
+  contactNumber   String
+  email           String
+  status          String    @default("PENDING") // PENDING, ACCEPTED, REJECTED, COMPLETED, CANCELLED
+  scheduledDate   DateTime?
+  rejectionReason String?
+  predictionData  Json?     // Stores diagnosis results array [{disease, confidence}]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  doctor          Doctor    @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+}

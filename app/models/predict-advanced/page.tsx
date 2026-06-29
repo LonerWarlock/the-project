@@ -12,6 +12,7 @@ import { ALL_SYMPTOMS_ANN } from "@/lib/symptoms-list-ann";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import DiagnosisReportAdv from "@/components/DiagnosisReportAdv";
+import DoctorRecommendation from "@/components/DoctorRecommendation";
 
 const formatName = (name: string) =>
   name.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
@@ -196,6 +197,7 @@ export default function PredictPage() {
                 date={new Date().toISOString()}
                 engine="Advanced"
               />
+              <DoctorRecommendation diseases={predictions.map(p => p.disease)} predictionData={{ symptoms: selected, results: predictions, engine: "Advanced", date: new Date().toISOString() }} />
             </div>
           </div>
         ) : (
